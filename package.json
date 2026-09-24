@@ -1,0 +1,15 @@
+{
+  "name": "vpwa",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "db:start": "bash scripts/db-local.sh start",
+    "db:stop": "bash scripts/db-local.sh stop",
+    "db:start:docker": "docker compose up -d",
+    "db:init": "node scripts/db-init.mjs"
+  },
+  "dependencies": {
+    "pg": "^8.16.0"
+  }
+}

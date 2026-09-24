@@ -1,0 +1,22 @@
+# Local Postgres cluster
+.pgdata/
+*.log
+
+# Env
+.env
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+quasar-dist/
+
+# Quasar generated
+.quasar/
+*.tsbuildinfo
+
+# Editor
+.idea/
+.vscode/
