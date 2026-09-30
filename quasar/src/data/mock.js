@@ -1,14 +1,16 @@
 // Sample data for the clickable prototype (phase 1), replaced by the backend later.
-// reactive() makes the arrays shared state: when the command line in the layout
+// reactive() makes the data shared state: when the command line in the layout
 // adds a message, every component that imports `messages` re-renders.
 import { reactive } from 'vue'
 
-export const currentUser = {
+export const currentUser = reactive({
   firstName: 'Peter',
   lastName: 'Bondra',
   nickName: 'bondra2002',
-  email: 'peter.bondra@smemajstri.com'
-}
+  email: 'peter.bondra@smemajstri.com',
+  status: 'online',
+  notifyMentionsOnly: false
+})
 
 export const channels = reactive([
   { name: 'general', isPrivate: false, owner: 'zigo', invited: false },
