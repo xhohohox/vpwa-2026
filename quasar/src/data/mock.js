@@ -63,3 +63,6 @@ export const messages = reactive([
     createdAt: new Date('2026-09-28T11:00')
   }
 ])
+
+// Users who are typing right now: { channel, nickName, draft }
+export const typing = reactive([])
