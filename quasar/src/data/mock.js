@@ -19,7 +19,18 @@ export const channels = reactive([
   { name: 'random', isPrivate: false, owner: 'demitra', invited: true }
 ])
 
+// Older history of #general, so the infinite scroll has something to load
+// (use case 7). Negative ids never clash with new ones (messages.length + 1).
+const history = Array.from({ length: 60 }, (_, i) => ({
+  id: -(60 - i),
+  channel: 'general',
+  author: ['zigo', 'demitra', 'bondra2002'][i % 3],
+  text: `Sprava z historie c. ${i + 1}`,
+  createdAt: new Date(2026, 8, 20, 8, i * 7) // from 20. 9., every 7 minutes
+}))
+
 export const messages = reactive([
+  ...history,
   {
     id: 1,
     channel: 'general',
