@@ -4,12 +4,17 @@
 import { watch } from 'vue'
 import { AppVisibility } from 'quasar'
 import { defineBoot } from '#q-app'
-import { currentUser, messages } from '@/data/mock.js'
+import { currentUser, channels, messages } from '@/data/mock.js'
 
 const PREVIEW_LENGTH = 80
 
 function shouldNotify(message) {
   if (message.author === currentUser.nickName) return false
+  // Only from channels I am a member of (not after leaving or being invited)
+  const mine = channels.some(
+    channel => channel.name === message.channel && !channel.invited
+  )
+  if (!mine) return false
   // Only when the app is not visible (another tab, minimized window)
   if (AppVisibility.appVisible) return false
   // DND: no notifications, offline: no messages at all (use case 9)
