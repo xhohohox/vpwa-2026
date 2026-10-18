@@ -98,6 +98,7 @@
     </q-page-container>
 
     <q-footer bordered class="bg-white q-pa-sm">
+      <TypingIndicator :channel="route.params.name" />
       <div
         v-if="currentUser.status === 'offline'"
         class="text-caption text-grey-8 q-mb-xs"
@@ -120,11 +121,15 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import TypingIndicator from '@/components/TypingIndicator.vue'
 import { currentUser, channels, messages } from '@/data/mock.js'
+import { startTypingSimulation } from '@/data/typingSimulation.js'
 
 const route = useRoute()
+
+onMounted(startTypingSimulation)
 
 const drawerOpen = ref(false)
 const draft = ref('')
