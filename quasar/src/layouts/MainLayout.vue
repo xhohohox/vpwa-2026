@@ -98,6 +98,12 @@
         You are offline. New messages will show up when you go online.
       </div>
       <div class="relative-position">
+        <CommandSuggestions
+          v-if="!mentionOptions.length"
+          :text="draft"
+          @select="completeCommand"
+        />
+
         <q-list
           v-if="mentionOptions.length"
           class="absolute bg-white shadow-2 rounded-borders"
@@ -128,6 +134,7 @@
         </q-list>
 
         <q-input
+          ref="inputRef"
           v-model="draft"
           :placeholder="`Message #${route.params.name} or type a /command`"
           outlined
@@ -156,6 +163,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import ChannelList from '@/components/ChannelList.vue'
+import CommandSuggestions from '@/components/CommandSuggestions.vue'
 import MembersDialog from '@/components/MembersDialog.vue'
 import TypingIndicator from '@/components/TypingIndicator.vue'
 import {
@@ -165,7 +173,7 @@ import {
   nextMessageId,
   users
 } from '@/data/mock.js'
-import { runCommand } from '@/data/commands.js'
+import { runCommand, matchCommands } from '@/data/commands.js'
 import { nextChannelPath } from '@/data/channels.js'
 import { fuzzyMatch } from '@/utils/fuzzy.js'
 import { statusOptions } from '@/utils/status.js'
@@ -180,6 +188,21 @@ onMounted(startTypingSimulation)
 const drawerOpen = ref(false)
 const membersOpen = ref(false)
 const draft = ref('')
+const inputRef = ref(null)
+
+// Picking a suggested command puts it into the command line
+function completeCommand(name) {
+  draft.value = name + ' '
+  inputRef.value.focus()
+}
+
+// Tab completes the first suggested command, like in a terminal
+function completeOnTab(event) {
+  const [first] = matchCommands(draft.value)
+  if (!first || draft.value.includes(' ')) return
+  event.preventDefault()
+  completeCommand(first.name)
+}
 
 const currentStatus = computed(() =>
   statusOptions.find(option => option.value === currentUser.status)
@@ -243,6 +266,12 @@ function onKeydown(event) {
       moveMention(-1)
       return
     }
+  }
+
+  // Without nickname suggestions, Tab completes the suggested /command
+  if (event.key === 'Tab') {
+    completeOnTab(event)
+    return
   }
 
   if (event.key === 'Enter') {
