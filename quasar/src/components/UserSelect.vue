@@ -10,6 +10,8 @@
     use-chips
     use-input
     input-debounce="0"
+    menu-anchor="top left"
+    menu-self="bottom left"
     @filter="filterUsers"
   />
 </template>

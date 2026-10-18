@@ -1,14 +1,18 @@
 <template>
+  <!-- Floats above the command line like the @mention list
+       (the parent element has the relative-position class) -->
   <q-list
     v-if="suggestions.length"
-    bordered
     dense
-    class="rounded-borders bg-grey-1 text-black q-mb-xs"
+    class="absolute bg-white text-black shadow-2 rounded-borders"
+    style="bottom: 100%; left: 0; right: 0; z-index: 6000"
   >
+    <!-- mousedown.prevent keeps the focus in the command line -->
     <q-item
       v-for="command in suggestions"
       :key="command.name"
       clickable
+      @mousedown.prevent
       @click="emit('select', command.name)"
     >
       <q-item-section>

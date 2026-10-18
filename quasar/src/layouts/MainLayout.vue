@@ -97,36 +97,85 @@
       >
         You are offline. New messages will show up when you go online.
       </div>
-      <CommandSuggestions :text="draft" @select="completeCommand" />
-      <q-input
-        ref="inputRef"
-        v-model="draft"
-        :placeholder="`Message #${route.params.name} or type a /command`"
-        outlined
-        dense
-        @keyup.enter="send"
-        @keydown.tab="completeOnTab"
-      >
-        <template #append>
-          <q-btn flat round dense icon="send" aria-label="Send" @click="send" />
-        </template>
-      </q-input>
+      <div class="relative-position">
+        <CommandSuggestions
+          v-if="!mentionOptions.length"
+          :text="draft"
+          @select="completeCommand"
+        />
+
+        <q-list
+          v-if="mentionOptions.length"
+          class="absolute bg-white shadow-2 rounded-borders"
+          style="bottom: 100%; left: 0; right: 0; z-index: 6000"
+        >
+          <q-item
+            v-for="(nick, index) in mentionOptions"
+            :key="nick"
+            clickable
+            :active="index === mentionIndex"
+            @mousedown.prevent="acceptMention(nick)"
+          >
+            <q-item-section avatar>
+              <q-avatar size="24px" color="primary" text-color="white">
+                {{ nick[0].toUpperCase() }}
+              </q-avatar>
+            </q-item-section>
+            <q-item-section
+              :class="
+                index === mentionIndex
+                  ? 'text-primary text-weight-medium'
+                  : 'text-grey-7'
+              "
+            >
+              {{ nick }}
+            </q-item-section>
+          </q-item>
+        </q-list>
+
+        <q-input
+          ref="inputRef"
+          v-model="draft"
+          :placeholder="`Message #${route.params.name} or type a /command`"
+          outlined
+          dense
+          @keydown="onKeydown"
+        >
+          <template #append>
+            <q-btn
+              flat
+              round
+              dense
+              icon="send"
+              aria-label="Send"
+              @click="send"
+            />
+          </template>
+        </q-input>
+      </div>
     </q-footer>
     <MembersDialog v-model="membersOpen" :channel="openChannel" />
   </q-layout>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import ChannelList from '@/components/ChannelList.vue'
 import CommandSuggestions from '@/components/CommandSuggestions.vue'
 import MembersDialog from '@/components/MembersDialog.vue'
 import TypingIndicator from '@/components/TypingIndicator.vue'
-import { currentUser, channels, messages, nextMessageId } from '@/data/mock.js'
+import {
+  currentUser,
+  channels,
+  messages,
+  nextMessageId,
+  users
+} from '@/data/mock.js'
 import { runCommand, matchCommands } from '@/data/commands.js'
 import { nextChannelPath } from '@/data/channels.js'
+import { fuzzyMatch } from '@/utils/fuzzy.js'
 import { statusOptions } from '@/utils/status.js'
 import { startTypingSimulation } from '@/data/typingSimulation.js'
 
@@ -166,6 +215,90 @@ const openChannel = computed(() =>
       channel.name === route.params.name &&
       channel.members.includes(currentUser.nickName)
   )
+)
+
+// Typing "@" in the command line fuzzy searches the nickNames; the results
+// are shown above the field
+const mentionIndex = ref(0)
+
+const mention = computed(() => {
+  const match = /(?:^|\s)@(\w*)$/.exec(draft.value)
+  return match ? match[1] : null
+})
+
+const mentionOptions = computed(() => {
+  if (mention.value === null) return []
+  return users
+    .map(user => user.nickName)
+    .filter(nick => fuzzyMatch(nick, mention.value))
+    .slice(0, 6)
+})
+
+watch(mentionOptions, () => {
+  mentionIndex.value = 0
+})
+
+function acceptMention(nick) {
+  draft.value = draft.value.replace(/@\w*$/, `@${nick} `)
+  mentionIndex.value = 0
+}
+
+function moveMention(step) {
+  const count = mentionOptions.value.length
+  mentionIndex.value = (mentionIndex.value + step + count) % count
+}
+
+// Tab and Enter take the highlighted nickname, otherwise Enter sends the line
+function onKeydown(event) {
+  if (mentionOptions.value.length) {
+    if (event.key === 'Tab') {
+      event.preventDefault()
+      acceptMention(mentionOptions.value[mentionIndex.value])
+      return
+    }
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      moveMention(1)
+      return
+    }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      moveMention(-1)
+      return
+    }
+  }
+
+  // Without nickname suggestions, Tab completes the suggested /command
+  if (event.key === 'Tab') {
+    completeOnTab(event)
+    return
+  }
+
+  if (event.key === 'Enter') {
+    if (mentionOptions.value.length) {
+      event.preventDefault()
+      acceptMention(mentionOptions.value[mentionIndex.value])
+      return
+    }
+    send()
+  }
+}
+
+// Leaving a channel takes access away: a channel I am neither a member of nor
+// invited to cannot stay open
+watch(
+  () => route.params.name,
+  name => {
+    const channel = channels.find(c => c.name === name)
+    if (!channel) return
+    const member = channel.members.includes(currentUser.nickName)
+    const invited = channel.invited.some(
+      ([nick]) => nick === currentUser.nickName
+    )
+    const next = nextChannelPath()
+    if (!member && !invited && next !== '/') router.replace(next)
+  },
+  { immediate: true }
 )
 
 // The command line: text starting with / is a command, anything else a message

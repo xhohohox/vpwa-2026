@@ -62,7 +62,10 @@ const fail = text => ({ ok: false, text })
 
 export function runCommand(input, openChannelName) {
   // "/join hokej private" -> name "/join", args ["hokej", "private"]
-  const [name, ...args] = input.trim().split(/\s+/)
+  // a nickName can be written with or without the leading @
+  const parts = input.trim().split(/\s+/)
+  const name = parts[0]
+  const args = parts.slice(1).map(arg => arg.replace(/^@/, ''))
   const me = currentUser.nickName
   const channel = channels.find(
     c => c.name === openChannelName && c.members.includes(me)

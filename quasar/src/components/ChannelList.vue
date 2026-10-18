@@ -16,9 +16,8 @@
     <q-item
       v-for="channel in sortedChannels"
       :key="channel.name"
-      :to="isInvited(channel) ? undefined : `/channels/${channel.name}`"
       :class="{ 'bg-amber-1': isInvited(channel) }"
-      @click="joinPublic(channel, $event)"
+      @click="open(channel)"
     >
       <q-item-section avatar>
         <q-icon :name="channel.isPrivate ? 'lock' : 'tag'" />
@@ -101,7 +100,12 @@ import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { currentUser, channels } from '@/data/mock.js'
-import { joinChannel, leaveChannel, quitChannel } from '@/data/channels.js'
+import {
+  joinChannel,
+  leaveChannel,
+  quitChannel,
+  nextChannelPath
+} from '@/data/channels.js'
 import ChannelCreateDialog from '@/components/ChannelCreateDialog.vue'
 import ChannelDetails from '@/components/ChannelDetails.vue'
 
@@ -159,16 +163,19 @@ function decline(channel) {
   )
 }
 
-// Clicking a public channel you are not in yet behaves like /join
-function joinPublic(channel, event) {
-  if (channel.isPrivate || isInvited(channel) || isMember(channel)) return
+// Clicking a channel opens it; a public channel I am not in is joined first
+function open(channel) {
+  if (isInvited(channel)) return
 
-  try {
-    joinChannel(currentUser.nickName, channel.name)
-  } catch (e) {
-    event.preventDefault()
-    $q.notify({ type: 'negative', message: e.message })
+  if (!isMember(channel)) {
+    try {
+      joinChannel(currentUser.nickName, channel.name)
+    } catch (e) {
+      $q.notify({ type: 'negative', message: e.message })
+      return
+    }
   }
+  router.push(`/channels/${channel.name}`)
 }
 
 // --- Leave / delete ---
@@ -210,10 +217,9 @@ function confirmThen(title, message, onOk) {
   $q.dialog({ title, message, cancel: true, persistent: true }).onOk(onOk)
 }
 
-// The open channel is gone, so switch to another one
+// The open channel is gone, so switch to another one I am a member of
 function goAwayFrom(name) {
   if (route.params.name !== name) return
-  const next = listedChannels.value.find(channel => !isInvited(channel))
-  router.push(next ? `/channels/${next.name}` : '/')
+  router.push(nextChannelPath())
 }
 </script>
