@@ -12,11 +12,47 @@ export const currentUser = reactive({
   notifyMentionsOnly: false
 })
 
+export const users = reactive(['zigo', 'demitra', 'bondra2002', 'sagan'])
+
+// invited  - [nickName, inviter] 
+// kickVotes - who voted (half +1 = ban)
 export const channels = reactive([
-  { name: 'general', isPrivate: false, owner: 'zigo', invited: false },
-  { name: 'vpwa', isPrivate: false, owner: 'bondra2002', invited: false },
-  { name: 'team', isPrivate: true, owner: 'bondra2002', invited: false },
-  { name: 'random', isPrivate: false, owner: 'demitra', invited: true }
+  {
+    name: 'general',
+    isPrivate: false,
+    owner: 'zigo',
+    invited: [],
+    members: ['zigo', 'demitra', 'bondra2002'],
+    banned: [],
+    kickVotes: {}
+  },
+  {
+    name: 'vpwa',
+    isPrivate: false,
+    owner: 'bondra2002',
+    invited: [],
+    members: ['bondra2002', 'demitra'],
+    banned: [],
+    kickVotes: {}
+  },
+  {
+    name: 'team',
+    isPrivate: true,
+    owner: 'bondra2002',
+    invited: [],
+    members: ['bondra2002'],
+    banned: [],
+    kickVotes: {}
+  },
+  {
+    name: 'random',
+    isPrivate: false,
+    owner: 'demitra',
+    invited: [['bondra2002', 'demitra']],
+    members: ['demitra'],
+    banned: [],
+    kickVotes: {}
+  }
 ])
 
 // Older history of #general, so the infinite scroll has something to load
