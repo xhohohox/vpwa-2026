@@ -12,6 +12,16 @@
         />
         <q-toolbar-title>#{{ route.params.name }}</q-toolbar-title>
 
+        <q-btn
+          v-if="openChannel"
+          flat
+          dense
+          round
+          icon="group"
+          aria-label="Members"
+          @click="membersOpen = true"
+        />
+
         <q-btn flat dense no-caps aria-label="Status and settings">
           <q-avatar size="32px" color="white" text-color="primary">
             {{ currentUser.nickName[0].toUpperCase() }}
@@ -89,7 +99,7 @@
       </div>
       <q-input
         v-model="draft"
-        :placeholder="`Message #${route.params.name}`"
+        :placeholder="`Message #${route.params.name} or type a /command`"
         outlined
         dense
         @keyup.enter="send"
@@ -99,57 +109,81 @@
         </template>
       </q-input>
     </q-footer>
+    <MembersDialog v-model="membersOpen" :channel="openChannel" />
   </q-layout>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
 import ChannelList from '@/components/ChannelList.vue'
+import MembersDialog from '@/components/MembersDialog.vue'
 import TypingIndicator from '@/components/TypingIndicator.vue'
-import { currentUser, messages } from '@/data/mock.js'
+import { currentUser, channels, messages, nextMessageId } from '@/data/mock.js'
+import { runCommand } from '@/data/commands.js'
+import { nextChannelPath } from '@/data/channelActions.js'
+import { statusOptions } from '@/utils/status.js'
 import { startTypingSimulation } from '@/data/typingSimulation.js'
 
+const $q = useQuasar()
 const route = useRoute()
+const router = useRouter()
 
 onMounted(startTypingSimulation)
 
 const drawerOpen = ref(false)
+const membersOpen = ref(false)
 const draft = ref('')
-
-// User status (use case 9): DND pauses notifications, offline pauses messages
-const statusOptions = [
-  { value: 'online', label: 'Online', color: 'green' },
-  {
-    value: 'dnd',
-    label: 'Do not disturb',
-    color: 'red',
-    description: 'No notifications'
-  },
-  {
-    value: 'offline',
-    label: 'Offline',
-    color: 'grey',
-    description: 'No new messages'
-  }
-]
 
 const currentStatus = computed(() =>
   statusOptions.find(option => option.value === currentUser.status)
 )
 
+// The open channel, if I am its member (not only invited)
+const openChannel = computed(() =>
+  channels.find(
+    channel => channel.name === route.params.name && !channel.invited
+  )
+)
+
+// The command line: text starting with / is a command, anything else a message
 function send() {
   const text = draft.value.trim()
   if (!text) return
 
-  // Prototype: everything is sent as a message, commands (/join, ...) come later
+  if (text.startsWith('/')) {
+    runAndShow(text)
+    return
+  }
+
   messages.push({
-    id: messages.length + 1,
+    id: nextMessageId(),
     channel: route.params.name,
     author: currentUser.nickName,
     text,
     createdAt: new Date()
   })
   draft.value = ''
+}
+
+function runAndShow(text) {
+  const result = runCommand(text, route.params.name)
+
+  // A failed command stays in the command line, so it can be fixed
+  if (!result.ok) {
+    $q.notify({ type: 'negative', message: result.text })
+    return
+  }
+  draft.value = ''
+
+  if (result.showMembers) {
+    membersOpen.value = true
+    return
+  }
+  // https://quasar.dev/quasar-plugins/notify
+  $q.notify({ type: 'positive', message: result.text })
+  if (result.open) router.push(`/channels/${result.open}`)
+  if (result.leftChannel) router.push(nextChannelPath())
 }
 </script>

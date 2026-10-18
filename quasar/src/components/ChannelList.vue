@@ -45,7 +45,7 @@
             color="negative"
             icon="close"
             aria-label="Decline invitation"
-            @click="removeChannel(channel.name, false)"
+            @click="removeAndLeave(channel.name, false)"
           />
         </div>
 
@@ -115,7 +115,15 @@
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
-import { currentUser, channels, messages } from '@/data/mock.js'
+import { channels } from '@/data/mock.js'
+import {
+  isOwner,
+  channelExists,
+  createChannel,
+  acceptInvitation,
+  removeChannel,
+  nextChannelPath
+} from '@/data/channelActions.js'
 import { required, noSpaces } from '@/utils/validation.js'
 
 const $q = useQuasar()
@@ -128,26 +136,16 @@ const sortedChannels = computed(() => [
   ...channels.filter(channel => !channel.invited)
 ])
 
-// The admin of a channel is the user who created it
-const isOwner = channel => channel.owner === currentUser.nickName
-
 // --- Create ---
 
 const createOpen = ref(false)
 const newName = ref('')
 const newIsPrivate = ref(false)
 
-// channelName is unique
-const isUnique = val =>
-  !channels.some(channel => channel.name === val) || 'Channel already exists'
+const isUnique = val => !channelExists(val) || 'Channel already exists'
 
 function create() {
-  channels.push({
-    name: newName.value,
-    isPrivate: newIsPrivate.value,
-    owner: currentUser.nickName,
-    invited: false
-  })
+  createChannel(newName.value, newIsPrivate.value)
   router.push(`/channels/${newName.value}`)
 
   createOpen.value = false
@@ -158,7 +156,7 @@ function create() {
 // --- Invitations ---
 
 function accept(channel) {
-  channel.invited = false
+  acceptInvitation(channel)
   router.push(`/channels/${channel.name}`)
 }
 
@@ -172,7 +170,7 @@ function leave(channel) {
     owner
       ? 'You are the admin, so leaving deletes the channel for everyone.'
       : 'The channel will disappear from your list.',
-    () => removeChannel(channel.name, owner)
+    () => removeAndLeave(channel.name, owner)
   )
 }
 
@@ -180,7 +178,7 @@ function remove(channel) {
   confirmThen(
     `Delete #${channel.name}?`,
     'The channel and its messages will be deleted for everyone.',
-    () => removeChannel(channel.name, true)
+    () => removeAndLeave(channel.name, true)
   )
 }
 
@@ -189,21 +187,9 @@ function confirmThen(title, message, onOk) {
   $q.dialog({ title, message, cancel: true, persistent: true }).onOk(onOk)
 }
 
-function removeChannel(name, deleteMessages) {
-  channels.splice(
-    channels.findIndex(channel => channel.name === name),
-    1
-  )
-
-  if (deleteMessages) {
-    const kept = messages.filter(message => message.channel !== name)
-    messages.splice(0, messages.length, ...kept)
-  }
-
+function removeAndLeave(name, deleteChannel) {
+  removeChannel(name, deleteChannel)
   // The open channel is gone, so switch to another one
-  if (route.params.name === name) {
-    const next = channels.find(channel => !channel.invited)
-    router.push(next ? `/channels/${next.name}` : '/')
-  }
+  if (route.params.name === name) router.push(nextChannelPath())
 }
 </script>
