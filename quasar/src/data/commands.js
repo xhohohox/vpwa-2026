@@ -10,7 +10,49 @@ import {
   kickVotesRequired
 } from '@/data/channels.js'
 
-const HELP = 'Commands: /join, /invite, /revoke, /kick, /quit, /cancel, /list'
+// Available commands with a short description, shown as suggestions while
+// typing. Later this list can come from the server.
+export const commandList = [
+  {
+    name: '/join',
+    usage: '/join channelName [private]',
+    description: 'Join a channel, or create it if it does not exist'
+  },
+  {
+    name: '/invite',
+    usage: '/invite nickName',
+    description: 'Invite a user to this channel'
+  },
+  {
+    name: '/revoke',
+    usage: '/revoke nickName',
+    description: 'Remove a user from this private channel (admin)'
+  },
+  {
+    name: '/kick',
+    usage: '/kick nickName',
+    description: 'Vote to kick a user, the admin bans at once'
+  },
+  { name: '/quit', usage: '/quit', description: 'Close this channel (admin)' },
+  { name: '/cancel', usage: '/cancel', description: 'Leave this channel' },
+  {
+    name: '/list',
+    usage: '/list',
+    description: 'Show the members of this channel'
+  }
+]
+
+// While the command name is typed ("/jo"), all commands starting with it match.
+// After a space ("/join ho") only that command is left, as a hint for its usage.
+export function matchCommands(text) {
+  if (!text.startsWith('/')) return []
+  const word = text.split(' ')[0]
+  return text.includes(' ')
+    ? commandList.filter(command => command.name === word)
+    : commandList.filter(command => command.name.startsWith(word))
+}
+
+const HELP = 'Commands: ' + commandList.map(command => command.name).join(', ')
 
 // Every command returns a result for the command line:
 // ok + text for the message to the user, optionally a channel to open,

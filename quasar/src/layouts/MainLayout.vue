@@ -97,12 +97,15 @@
       >
         You are offline. New messages will show up when you go online.
       </div>
+      <CommandSuggestions :text="draft" @select="completeCommand" />
       <q-input
+        ref="inputRef"
         v-model="draft"
         :placeholder="`Message #${route.params.name} or type a /command`"
         outlined
         dense
         @keyup.enter="send"
+        @keydown.tab="completeOnTab"
       >
         <template #append>
           <q-btn flat round dense icon="send" aria-label="Send" @click="send" />
@@ -118,10 +121,11 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import ChannelList from '@/components/ChannelList.vue'
+import CommandSuggestions from '@/components/CommandSuggestions.vue'
 import MembersDialog from '@/components/MembersDialog.vue'
 import TypingIndicator from '@/components/TypingIndicator.vue'
 import { currentUser, channels, messages, nextMessageId } from '@/data/mock.js'
-import { runCommand } from '@/data/commands.js'
+import { runCommand, matchCommands } from '@/data/commands.js'
 import { nextChannelPath } from '@/data/channels.js'
 import { statusOptions } from '@/utils/status.js'
 import { startTypingSimulation } from '@/data/typingSimulation.js'
@@ -135,6 +139,21 @@ onMounted(startTypingSimulation)
 const drawerOpen = ref(false)
 const membersOpen = ref(false)
 const draft = ref('')
+const inputRef = ref(null)
+
+// Picking a suggested command puts it into the command line
+function completeCommand(name) {
+  draft.value = name + ' '
+  inputRef.value.focus()
+}
+
+// Tab completes the first suggested command, like in a terminal
+function completeOnTab(event) {
+  const [first] = matchCommands(draft.value)
+  if (!first || draft.value.includes(' ')) return
+  event.preventDefault()
+  completeCommand(first.name)
+}
 
 const currentStatus = computed(() =>
   statusOptions.find(option => option.value === currentUser.status)
