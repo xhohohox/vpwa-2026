@@ -60,7 +60,7 @@ const members = computed(() => {
       status: statusOf(nick),
       invited: false
     })),
-    ...props.channel.invites.map(nick => ({
+    ...props.channel.invited.map(([nick]) => ({
       nickName: nick,
       status: statusOf(nick),
       invited: true

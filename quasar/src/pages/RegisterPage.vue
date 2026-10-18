@@ -85,7 +85,8 @@ const passwordConfirm = ref('')
 
 const passwordsMatch = val => val === password.value || 'Passwords do not match'
 
-const isNickUnique = val => !users.includes(val) || 'Nickname is already taken'
+const isNickUnique = val =>
+  !users.some(user => user.nickName === val) || 'Nickname is already taken'
 
 function onSubmit() {
   // Prototype: there is no backend yet, so the account is not stored anywhere

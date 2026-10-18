@@ -23,14 +23,14 @@ export const users = reactive([
 
 // Channels in my list. Like the tables in the data model, every channel has
 // its members, banned users and votes to kick someone ({ nickName: [voters] }).
+// invited  - [nickName, inviter] pairs with a pending invitation
 export const channels = reactive([
   {
     name: 'general',
     isPrivate: false,
     owner: 'zigo',
-    invited: false,
+    invited: [],
     members: ['zigo', 'demitra', 'bondra2002', 'troll'],
-    invites: [],
     banned: [],
     // two members already voted to kick troll, the third vote bans him
     kickVotes: { troll: ['zigo', 'demitra'] }
@@ -39,9 +39,8 @@ export const channels = reactive([
     name: 'vpwa',
     isPrivate: false,
     owner: 'bondra2002',
-    invited: false,
+    invited: [],
     members: ['bondra2002', 'demitra', 'ed'],
-    invites: [],
     banned: [],
     kickVotes: {}
   },
@@ -49,9 +48,8 @@ export const channels = reactive([
     name: 'team',
     isPrivate: true,
     owner: 'bondra2002',
-    invited: false,
+    invited: [],
     members: ['bondra2002', 'satan'],
-    invites: [],
     banned: [],
     kickVotes: {}
   },
@@ -59,23 +57,19 @@ export const channels = reactive([
     name: 'random',
     isPrivate: false,
     owner: 'demitra',
-    invited: true,
+    invited: [['bondra2002', 'demitra']],
     members: ['demitra', 'zigo'],
-    invites: ['bondra2002'],
     banned: [],
     kickVotes: {}
-  }
-])
+  },
 
-// Existing channels I am not in, so /join has something to join
-export const otherChannels = reactive([
+  // Existing channels I am not in, so /join has something to join
   {
     name: 'hokej',
     isPrivate: false,
     owner: 'satan',
-    invited: false,
+    invited: [],
     members: ['satan', 'zigo'],
-    invites: [],
     banned: [],
     kickVotes: {}
   },
@@ -83,9 +77,8 @@ export const otherChannels = reactive([
     name: 'tajne',
     isPrivate: true,
     owner: 'zigo',
-    invited: false,
+    invited: [],
     members: ['zigo'],
-    invites: [],
     banned: [],
     kickVotes: {}
   },
@@ -93,9 +86,8 @@ export const otherChannels = reactive([
     name: 'spam',
     isPrivate: false,
     owner: 'troll',
-    invited: false,
+    invited: [],
     members: ['troll'],
-    invites: [],
     banned: ['bondra2002'],
     kickVotes: {}
   }

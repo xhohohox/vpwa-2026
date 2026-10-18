@@ -12,7 +12,9 @@ function shouldNotify(message) {
   if (message.author === currentUser.nickName) return false
   // Only from channels I am a member of (not after leaving or being invited)
   const mine = channels.some(
-    channel => channel.name === message.channel && !channel.invited
+    channel =>
+      channel.name === message.channel &&
+      channel.members.includes(currentUser.nickName)
   )
   if (!mine) return false
   // Only when the app is not visible (another tab, minimized window)

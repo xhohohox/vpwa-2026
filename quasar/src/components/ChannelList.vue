@@ -18,7 +18,7 @@
       :key="channel.name"
       :to="isInvited(channel) ? undefined : `/channels/${channel.name}`"
       :class="{ 'bg-amber-1': isInvited(channel) }"
-      @click="joinPublic(channel)"
+      @click="joinPublic(channel, $event)"
     >
       <q-item-section avatar>
         <q-icon :name="channel.isPrivate ? 'lock' : 'tag'" />
@@ -48,7 +48,7 @@
             color="negative"
             icon="close"
             aria-label="Decline invitation"
-            @click="removeAndLeave(channel.name, false)"
+            @click="decline(channel)"
           />
         </div>
 
@@ -100,16 +100,10 @@
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
-import { channels } from '@/data/mock.js'
-import {
-  isOwner,
-  channelExists,
-  createChannel,
-  acceptInvitation,
-  removeChannel,
-  nextChannelPath
-} from '@/data/channelActions.js'
-import { required, noSpaces } from '@/utils/validation.js'
+import { currentUser, channels } from '@/data/mock.js'
+import { joinChannel, leaveChannel, quitChannel } from '@/data/channels.js'
+import ChannelCreateDialog from '@/components/ChannelCreateDialog.vue'
+import ChannelDetails from '@/components/ChannelDetails.vue'
 
 const $q = useQuasar()
 const route = useRoute()
@@ -121,27 +115,41 @@ const isMember = channel => channel.members.includes(currentUser.nickName)
 const isInvited = channel =>
   channel.invited.some(([nick]) => nick === currentUser.nickName)
 
+// The admin of a channel is the user who created it
+const isOwner = channel => channel.owner === currentUser.nickName
+
+// A private channel is visible only to its members and invited users, a
+// public one to everybody (so it can be joined with a single click)
+const listedChannels = computed(() =>
+  channels.filter(
+    channel => !channel.isPrivate || isInvited(channel) || isMember(channel)
+  )
+)
+
+// Invitations are highlighted and shown at the top of the list (use case 2)
+const sortedChannels = computed(() => [
+  ...listedChannels.value.filter(isInvited),
+  ...listedChannels.value.filter(channel => !isInvited(channel))
+])
+
 // --- Create ---
 
 const createOpen = ref(false)
-const newName = ref('')
-const newIsPrivate = ref(false)
 
-const isUnique = val => !channelExists(val) || 'Channel already exists'
+// --- Details ---
 
-function create() {
-  createChannel(newName.value, newIsPrivate.value)
-  router.push(`/channels/${newName.value}`)
+const detailsOpen = ref(false)
+const detailsChannel = ref(null)
 
-  createOpen.value = false
-  newName.value = ''
-  newIsPrivate.value = false
+function openDetails(channel) {
+  detailsChannel.value = channel
+  detailsOpen.value = true
 }
 
 // --- Invitations ---
 
 function accept(channel) {
-  acceptInvitation(channel)
+  joinChannel(currentUser.nickName, channel.name)
   router.push(`/channels/${channel.name}`)
 }
 
@@ -152,9 +160,14 @@ function decline(channel) {
 }
 
 // Clicking a public channel you are not in yet behaves like /join
-function joinPublic(channel) {
-  if (!channel.isPrivate && !isInvited(channel) && !isMember(channel)) {
+function joinPublic(channel, event) {
+  if (channel.isPrivate || isInvited(channel) || isMember(channel)) return
+
+  try {
     joinChannel(currentUser.nickName, channel.name)
+  } catch (e) {
+    event.preventDefault()
+    $q.notify({ type: 'negative', message: e.message })
   }
 }
 
@@ -167,8 +180,11 @@ function leave(channel) {
     `Leave #${channel.name}?`,
     owner
       ? 'You are the admin, so leaving deletes the channel for everyone.'
-      : 'The channel will disappear from your list.',
-    () => removeAndLeave(channel.name, owner)
+      : leaveMessage(channel),
+    () => {
+      leaveChannel(currentUser.nickName, channel.name)
+      goAwayFrom(channel.name)
+    }
   )
 }
 
@@ -182,7 +198,10 @@ function remove(channel) {
   confirmThen(
     `Delete #${channel.name}?`,
     'The channel and its messages will be deleted for everyone.',
-    () => removeAndLeave(channel.name, true)
+    () => {
+      quitChannel(currentUser.nickName, channel.name)
+      goAwayFrom(channel.name)
+    }
   )
 }
 
@@ -191,9 +210,10 @@ function confirmThen(title, message, onOk) {
   $q.dialog({ title, message, cancel: true, persistent: true }).onOk(onOk)
 }
 
-function removeAndLeave(name, deleteChannel) {
-  removeChannel(name, deleteChannel)
-  // The open channel is gone, so switch to another one
-  if (route.params.name === name) router.push(nextChannelPath())
+// The open channel is gone, so switch to another one
+function goAwayFrom(name) {
+  if (route.params.name !== name) return
+  const next = listedChannels.value.find(channel => !isInvited(channel))
+  router.push(next ? `/channels/${next.name}` : '/')
 }
 </script>
