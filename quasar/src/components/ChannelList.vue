@@ -16,19 +16,22 @@
     <q-item
       v-for="channel in sortedChannels"
       :key="channel.name"
-      :to="channel.invited ? undefined : `/channels/${channel.name}`"
-      :class="{ 'bg-amber-1': channel.invited }"
+      :to="isInvited(channel) ? undefined : `/channels/${channel.name}`"
+      :class="{ 'bg-amber-1': isInvited(channel) }"
+      @click="joinPublic(channel)"
     >
       <q-item-section avatar>
         <q-icon :name="channel.isPrivate ? 'lock' : 'tag'" />
       </q-item-section>
       <q-item-section>
         <q-item-label>{{ channel.name }}</q-item-label>
-        <q-item-label v-if="channel.invited" caption>Invitation</q-item-label>
+        <q-item-label v-if="isInvited(channel)" caption>
+          Invitation
+        </q-item-label>
       </q-item-section>
 
       <q-item-section side>
-        <div v-if="channel.invited" class="row no-wrap">
+        <div v-if="isInvited(channel)" class="row no-wrap">
           <q-btn
             flat
             round
@@ -60,6 +63,9 @@
         >
           <q-menu>
             <q-list style="min-width: 170px">
+              <q-item clickable v-close-popup @click="openDetails(channel)">
+                <q-item-section>Details</q-item-section>
+              </q-item>
               <q-item clickable v-close-popup @click="leave(channel)">
                 <q-item-section>Leave channel</q-item-section>
               </q-item>
@@ -80,35 +86,14 @@
     </q-item>
   </q-list>
 
-  <q-dialog v-model="createOpen">
-    <q-card style="width: 100%; max-width: 360px">
-      <q-form @submit="create">
-        <q-card-section class="text-h6">Create channel</q-card-section>
-        <q-card-section>
-          <q-input
-            v-model="newName"
-            label="Channel name"
-            outlined
-            autofocus
-            lazy-rules
-            :rules="[required, noSpaces, isUnique]"
-          />
-          <q-toggle v-model="newIsPrivate" label="Private channel" />
-          <div class="text-caption text-grey-7">
-            {{
-              newIsPrivate
-                ? 'Only you can invite people.'
-                : 'Anyone can join with /join.'
-            }}
-          </div>
-        </q-card-section>
-        <q-card-actions align="right">
-          <q-btn flat label="Cancel" v-close-popup />
-          <q-btn type="submit" color="primary" unelevated label="Create" />
-        </q-card-actions>
-      </q-form>
-    </q-card>
-  </q-dialog>
+  <ChannelCreateDialog v-model="createOpen" />
+
+  <ChannelDetails
+    v-if="detailsChannel"
+    v-model="detailsOpen"
+    :channel="detailsChannel"
+    @left="goAwayFrom"
+  />
 </template>
 
 <script setup>
@@ -130,11 +115,11 @@ const $q = useQuasar()
 const route = useRoute()
 const router = useRouter()
 
-// Invitations are highlighted and shown at the top of the list (use case 2)
-const sortedChannels = computed(() => [
-  ...channels.filter(channel => channel.invited),
-  ...channels.filter(channel => !channel.invited)
-])
+const isMember = channel => channel.members.includes(currentUser.nickName)
+
+// invited - [nickName, inviter] pairs, only the listed nickName is invited
+const isInvited = channel =>
+  channel.invited.some(([nick]) => nick === currentUser.nickName)
 
 // --- Create ---
 
@@ -160,6 +145,19 @@ function accept(channel) {
   router.push(`/channels/${channel.name}`)
 }
 
+function decline(channel) {
+  channel.invited = channel.invited.filter(
+    ([nick]) => nick !== currentUser.nickName
+  )
+}
+
+// Clicking a public channel you are not in yet behaves like /join
+function joinPublic(channel) {
+  if (!channel.isPrivate && !isInvited(channel) && !isMember(channel)) {
+    joinChannel(currentUser.nickName, channel.name)
+  }
+}
+
 // --- Leave / delete ---
 
 function leave(channel) {
@@ -172,6 +170,12 @@ function leave(channel) {
       : 'The channel will disappear from your list.',
     () => removeAndLeave(channel.name, owner)
   )
+}
+
+function leaveMessage(channel) {
+  // A private channel drops out of the list, a public one can be rejoined
+  if (channel.isPrivate) return 'The channel will disappear from your list.'
+  return 'You can rejoin it with one click.'
 }
 
 function remove(channel) {

@@ -26,7 +26,7 @@
           hint="Others will mention you as @nickname"
           outlined
           lazy-rules
-          :rules="[required, noSpaces]"
+          :rules="[required, noSpaces, isNickUnique]"
         />
         <q-input
           v-model="email"
@@ -72,6 +72,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { required, isEmail, minLength, noSpaces } from '@/utils/validation.js'
+import { users } from '@/data/mock.js'
 
 const router = useRouter()
 
@@ -83,6 +84,8 @@ const password = ref('')
 const passwordConfirm = ref('')
 
 const passwordsMatch = val => val === password.value || 'Passwords do not match'
+
+const isNickUnique = val => !users.includes(val) || 'Nickname is already taken'
 
 function onSubmit() {
   // Prototype: there is no backend yet, so the account is not stored anywhere
