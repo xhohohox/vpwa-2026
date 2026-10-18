@@ -187,7 +187,7 @@ const kickLabel = member =>
   isMyAdmin.value ? 'Ban' : hasVoted(member) ? 'Undo vote' : 'Vote kick'
 
 // The admin bans right away, a member of a public channel only collects
-// votes (half +1 of the members = ban), a private channel is off limits
+// votes (3 votes = ban), a private channel is off limits
 function canKick(member) {
   if (!isMember.value) return false
   if (member === nick || member === props.channel.owner) return false

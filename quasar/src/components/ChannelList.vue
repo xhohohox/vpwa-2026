@@ -122,12 +122,10 @@ const isInvited = channel =>
 // The admin of a channel is the user who created it
 const isOwner = channel => channel.owner === currentUser.nickName
 
-// A private channel is visible only to its members and invited users, a
-// public one to everybody (so it can be joined with a single click)
+// Only channels I am a member of or invited to (use case 2). After leaving
+// or being banned the channel drops out; other channels are joined with /join.
 const listedChannels = computed(() =>
-  channels.filter(
-    channel => !channel.isPrivate || isInvited(channel) || isMember(channel)
-  )
+  channels.filter(channel => isMember(channel) || isInvited(channel))
 )
 
 // Invitations are highlighted and shown at the top of the list (use case 2)
@@ -163,18 +161,9 @@ function decline(channel) {
   )
 }
 
-// Clicking a channel opens it; a public channel I am not in is joined first
+// Clicking a channel opens it; an invitation has to be accepted first
 function open(channel) {
   if (isInvited(channel)) return
-
-  if (!isMember(channel)) {
-    try {
-      joinChannel(currentUser.nickName, channel.name)
-    } catch (e) {
-      $q.notify({ type: 'negative', message: e.message })
-      return
-    }
-  }
   router.push(`/channels/${channel.name}`)
 }
 
@@ -196,9 +185,9 @@ function leave(channel) {
 }
 
 function leaveMessage(channel) {
-  // A private channel drops out of the list, a public one can be rejoined
+  // The channel drops out of the list, a public one can be rejoined
   if (channel.isPrivate) return 'The channel will disappear from your list.'
-  return 'You can rejoin it with one click.'
+  return `The channel will disappear from your list, /join ${channel.name} brings you back.`
 }
 
 function remove(channel) {

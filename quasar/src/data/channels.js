@@ -1,9 +1,10 @@
 // Channel management logic for /commands
 import { currentUser, channels, messages, users } from '@/data/mock.js'
 
-// half of the members +1 votes are needed for a valid vote kick
-export function kickVotesRequired(channel) {
-  return Math.floor(channel.members.length / 2) + 1
+// The assignment: when at least 3 members kick a user from a public channel,
+// the user gets a permanent ban (use case 4)
+export function kickVotesRequired() {
+  return 3
 }
 
 function findChannel(channelName) {
@@ -146,9 +147,10 @@ export function uninvite(nickName, channelName, targetName) {
 // /kick nickName
 export function kick(nickName, channelName, targetName) {
   const channel = findChannel(channelName)
+  // checked first: the current user is not in the list of other users
+  if (nickName === targetName) throw new Error('You cannot kick yourself')
   findUser(targetName)
 
-  if (nickName === targetName) throw new Error('You cannot kick yourself')
   if (targetName === channel.owner) {
     throw new Error('The admin of the channel cannot be kicked')
   }
