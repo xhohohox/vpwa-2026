@@ -72,25 +72,7 @@
     </q-header>
 
     <q-drawer v-model="drawerOpen" show-if-above bordered>
-      <q-list>
-        <q-item-label header>Channels</q-item-label>
-        <q-item
-          v-for="channel in sortedChannels"
-          :key="channel.name"
-          :to="`/channels/${channel.name}`"
-          :class="{ 'bg-amber-1': channel.invited }"
-        >
-          <q-item-section avatar>
-            <q-icon :name="channel.isPrivate ? 'lock' : 'tag'" />
-          </q-item-section>
-          <q-item-section>
-            <q-item-label>{{ channel.name }}</q-item-label>
-            <q-item-label v-if="channel.invited" caption>
-              Invitation
-            </q-item-label>
-          </q-item-section>
-        </q-item>
-      </q-list>
+      <ChannelList />
     </q-drawer>
 
     <q-page-container>
@@ -123,8 +105,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import ChannelList from '@/components/ChannelList.vue'
 import TypingIndicator from '@/components/TypingIndicator.vue'
-import { currentUser, channels, messages } from '@/data/mock.js'
+import { currentUser, messages } from '@/data/mock.js'
 import { startTypingSimulation } from '@/data/typingSimulation.js'
 
 const route = useRoute()
@@ -154,12 +137,6 @@ const statusOptions = [
 const currentStatus = computed(() =>
   statusOptions.find(option => option.value === currentUser.status)
 )
-
-// Invitations are highlighted and shown at the top of the list (use case 2)
-const sortedChannels = computed(() => [
-  ...channels.filter(channel => channel.invited),
-  ...channels.filter(channel => !channel.invited)
-])
 
 function send() {
   const text = draft.value.trim()
