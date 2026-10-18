@@ -138,7 +138,7 @@ function revoke(channel, nick) {
   return ok(`${nick} was removed from #${channel.name}`)
 }
 
-// /kick nickName - the admin bans at once, members vote (half +1 = ban)
+// /kick nickName - the admin bans at once, members vote (3 votes = ban)
 function kick(channel, nick) {
   const me = currentUser.nickName
   if (!nick) return fail('Usage: /kick nickName')
