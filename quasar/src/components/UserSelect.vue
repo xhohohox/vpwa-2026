@@ -30,13 +30,15 @@ const options = ref([])
 // Fuzzy search over the registered nickNames (nickName itself is unique)
 function filterUsers(val, update) {
   update(() => {
-    options.value = users.filter(
-      nick =>
-        nick !== currentUser.nickName &&
-        !props.exclude.includes(nick) &&
-        !model.value.includes(nick) &&
-        fuzzyMatch(nick, val)
-    )
+    options.value = users
+      .map(user => user.nickName)
+      .filter(
+        nick =>
+          nick !== currentUser.nickName &&
+          !props.exclude.includes(nick) &&
+          !model.value.includes(nick) &&
+          fuzzyMatch(nick, val)
+      )
   })
 }
 </script>

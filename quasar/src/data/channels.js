@@ -1,5 +1,5 @@
 // Channel management logic for /commands
-import { channels, messages, users } from '@/data/mock.js'
+import { currentUser, channels, messages, users } from '@/data/mock.js'
 
 // half of the members +1 votes are needed for a valid vote kick
 export function kickVotesRequired(channel) {
@@ -13,7 +13,7 @@ function findChannel(channelName) {
 }
 
 function findUser(nickName) {
-  if (!users.includes(nickName))
+  if (!users.some(user => user.nickName === nickName))
     throw new Error(`User ${nickName} does not exist`)
   return nickName
 }
@@ -198,4 +198,12 @@ export function quitChannel(nickName, channelName) {
   const kept = messages.filter(message => message.channel !== channelName)
   messages.splice(0, messages.length, ...kept)
   return channel
+}
+
+// Where to go when the open channel disappeared (closed or left)
+export function nextChannelPath() {
+  const next = channels.find(channel =>
+    channel.members.includes(currentUser.nickName)
+  )
+  return next ? `/channels/${next.name}` : '/'
 }

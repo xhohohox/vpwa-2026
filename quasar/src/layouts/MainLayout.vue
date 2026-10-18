@@ -122,7 +122,7 @@ import MembersDialog from '@/components/MembersDialog.vue'
 import TypingIndicator from '@/components/TypingIndicator.vue'
 import { currentUser, channels, messages, nextMessageId } from '@/data/mock.js'
 import { runCommand } from '@/data/commands.js'
-import { nextChannelPath } from '@/data/channelActions.js'
+import { nextChannelPath } from '@/data/channels.js'
 import { statusOptions } from '@/utils/status.js'
 import { startTypingSimulation } from '@/data/typingSimulation.js'
 
@@ -143,7 +143,9 @@ const currentStatus = computed(() =>
 // The open channel, if I am its member (not only invited)
 const openChannel = computed(() =>
   channels.find(
-    channel => channel.name === route.params.name && !channel.invited
+    channel =>
+      channel.name === route.params.name &&
+      channel.members.includes(currentUser.nickName)
   )
 )
 

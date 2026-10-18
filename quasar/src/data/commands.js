@@ -1,11 +1,14 @@
 // Commands typed into the command line (use cases 4, 5, 10).
-import { currentUser, channels, otherChannels, users } from '@/data/mock.js'
+import { currentUser, channels } from '@/data/mock.js'
 import {
-  isOwner,
-  createChannel,
-  acceptInvitation,
-  removeChannel
-} from '@/data/channelActions.js'
+  joinChannel,
+  leaveChannel,
+  invite as inviteUser,
+  revoke as revokeUser,
+  kick as kickUser,
+  quitChannel,
+  kickVotesRequired
+} from '@/data/channels.js'
 
 const HELP = 'Commands: /join, /invite, /revoke, /kick, /quit, /cancel, /list'
 
@@ -18,7 +21,10 @@ const fail = text => ({ ok: false, text })
 export function runCommand(input, openChannelName) {
   // "/join hokej private" -> name "/join", args ["hokej", "private"]
   const [name, ...args] = input.trim().split(/\s+/)
-  const channel = channels.find(c => c.name === openChannelName && !c.invited)
+  const me = currentUser.nickName
+  const channel = channels.find(
+    c => c.name === openChannelName && c.members.includes(me)
+  )
 
   if (name === '/join') return join(args[0], args[1] === 'private')
   if (!channel) return fail('Open a channel you are a member of first')
@@ -46,132 +52,88 @@ function join(name, isPrivate) {
   if (!name) return fail('Usage: /join channelName [private]')
   const me = currentUser.nickName
 
-  const mine = channels.find(c => c.name === name)
-  if (mine) {
-    if (!mine.invited) return ok(`You are already in #${name}`, { open: name })
-    acceptInvitation(mine)
-    return ok(`You joined #${name}`, { open: name })
+  const existing = channels.find(c => c.name === name)
+  const wasMember = existing?.members.includes(me)
+  try {
+    joinChannel(me, name, { isPrivate })
+  } catch (e) {
+    return fail(e.message)
   }
 
-  const existing = otherChannels.find(c => c.name === name)
-  if (existing) {
-    if (existing.banned.includes(me)) {
-      return fail(`You are banned from #${name}`)
-    }
-    if (existing.isPrivate && !existing.invites.includes(me)) {
-      return fail(`#${name} is private, ask its admin for an invite`)
-    }
-    otherChannels.splice(otherChannels.indexOf(existing), 1)
-    channels.push(existing)
-    acceptInvitation(existing)
-    return ok(`You joined #${name}`, { open: name })
-  }
-
-  // The channel does not exist yet, so it is created and I am its admin
-  createChannel(name, isPrivate)
+  if (wasMember) return ok(`You are already in #${name}`, { open: name })
+  if (existing) return ok(`You joined #${name}`, { open: name })
   const type = isPrivate ? 'private' : 'public'
   return ok(`Created ${type} channel #${name}`, { open: name })
 }
 
 // /invite nickName
 function invite(channel, nick) {
+  const me = currentUser.nickName
   if (!nick) return fail('Usage: /invite nickName')
-  if (!users.some(user => user.nickName === nick)) {
-    return fail(`User ${nick} does not exist`)
-  }
-  if (channel.isPrivate && !isOwner(channel)) {
-    return fail('Only the admin can invite to a private channel')
-  }
 
-  let unbanned = false
-  if (channel.banned.includes(nick)) {
-    // Only the admin can let a banned user back into the channel
-    if (!isOwner(channel)) {
-      return fail(`${nick} is banned, only the admin can invite them back`)
-    }
-    channel.banned = channel.banned.filter(n => n !== nick)
-    delete channel.kickVotes[nick]
-    unbanned = true
+  const unbanned = channel.banned.includes(nick)
+  try {
+    inviteUser(me, channel.name, nick)
+  } catch (e) {
+    return fail(e.message)
   }
-
-  if (channel.members.includes(nick)) {
-    return fail(`${nick} is already in #${channel.name}`)
-  }
-  if (channel.invites.includes(nick)) {
-    return fail(`${nick} is already invited to #${channel.name}`)
-  }
-
-  channel.invites.push(nick)
   const what = unbanned ? 'unbanned and invited' : 'invited'
   return ok(`${nick} was ${what} to #${channel.name}`)
 }
 
-// /revoke nickName - only the admin of a private channel
+// /revoke nickName - the admin takes access away (invitation or membership)
 function revoke(channel, nick) {
+  const me = currentUser.nickName
   if (!nick) return fail('Usage: /revoke nickName')
-  if (!channel.isPrivate) {
-    return fail('/revoke works in private channels, use /kick here')
-  }
-  if (!isOwner(channel)) return fail('Only the admin can revoke users')
-  if (nick === currentUser.nickName) return fail('Use /cancel to leave')
-
-  if (channel.members.includes(nick)) {
-    channel.members = channel.members.filter(n => n !== nick)
-  } else if (channel.invites.includes(nick)) {
-    channel.invites = channel.invites.filter(n => n !== nick)
-  } else {
-    return fail(`${nick} is not in #${channel.name}`)
+  try {
+    revokeUser(me, channel.name, nick)
+  } catch (e) {
+    return fail(e.message)
   }
   return ok(`${nick} was removed from #${channel.name}`)
 }
 
-// /kick nickName - the admin bans at once, members vote (3 votes = ban)
+// /kick nickName - the admin bans at once, members vote (half +1 = ban)
 function kick(channel, nick) {
-  if (!nick) return fail('Usage: /kick nickName')
   const me = currentUser.nickName
-  if (nick === me) return fail('Use /cancel to leave the channel')
-  if (!channel.members.includes(nick)) {
-    return fail(`${nick} is not a member of #${channel.name}`)
-  }
-  if (nick === channel.owner) return fail('The admin cannot be kicked')
+  if (!nick) return fail('Usage: /kick nickName')
+  const required = kickVotesRequired(channel)
+  const voted = channel.kickVotes[nick]?.includes(me) ?? false
 
-  if (isOwner(channel)) {
-    ban(channel, nick)
+  try {
+    kickUser(me, channel.name, nick)
+  } catch (e) {
+    return fail(e.message)
+  }
+
+  if (channel.banned.includes(nick)) {
     return ok(`${nick} was banned from #${channel.name}`)
   }
-  if (channel.isPrivate) {
-    return fail('Only the admin can remove users from a private channel')
-  }
-
-  if (!channel.kickVotes[nick]) channel.kickVotes[nick] = []
-  const votes = channel.kickVotes[nick]
-  if (votes.includes(me)) return fail(`You already voted to kick ${nick}`)
-  votes.push(me)
-
-  if (votes.length >= 3) {
-    ban(channel, nick)
-    return ok(`${nick} got 3 votes and was banned from #${channel.name}`)
-  }
-  return ok(`Your vote to kick ${nick} was counted (${votes.length}/3)`)
-}
-
-function ban(channel, nick) {
-  channel.members = channel.members.filter(n => n !== nick)
-  channel.banned.push(nick)
-  delete channel.kickVotes[nick]
+  if (voted) return ok(`Your vote to kick ${nick} was taken back`)
+  const votes = channel.kickVotes[nick]?.length ?? 0
+  return ok(`Your vote to kick ${nick} was counted (${votes}/${required})`)
 }
 
 // /quit - the admin closes the channel
 function quit(channel) {
-  if (!isOwner(channel)) return fail('Only the admin can close the channel')
-  removeChannel(channel.name, true)
+  const me = currentUser.nickName
+  try {
+    quitChannel(me, channel.name)
+  } catch (e) {
+    return fail(e.message)
+  }
   return ok(`#${channel.name} was closed`, { leftChannel: true })
 }
 
 // /cancel - leave the channel; when the admin leaves, the channel is closed
 function cancel(channel) {
-  const owner = isOwner(channel)
-  removeChannel(channel.name, owner)
+  const me = currentUser.nickName
+  const owner = channel.owner === me
+  try {
+    leaveChannel(me, channel.name)
+  } catch (e) {
+    return fail(e.message)
+  }
   const text = owner
     ? `You left #${channel.name}, so it was closed`
     : `You left #${channel.name}`
