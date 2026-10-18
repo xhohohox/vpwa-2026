@@ -14,7 +14,7 @@ export const currentUser = reactive({
 
 export const users = reactive(['zigo', 'demitra', 'bondra2002', 'sagan'])
 
-// invited  - [nickName, inviter] 
+// invited  - [nickName, inviter]
 // kickVotes - who voted (half +1 = ban)
 export const channels = reactive([
   {
