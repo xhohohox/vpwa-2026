@@ -25,7 +25,10 @@ export default defineRouter((/* { store, ssrContext } */) => {
       : createWebHashHistory
 
   const Router = createRouter({
-    scrollBehavior: () => ({ left: 0, top: 0 }),
+    // The chat starts at the newest message (the infinite scroll scrolls it
+    // to the bottom), so the router must not move it to the top
+    scrollBehavior: to =>
+      to.path.startsWith('/channels/') ? false : { left: 0, top: 0 },
     routes,
 
     // Leave this as is and make changes in quasar.conf.js instead!
