@@ -76,7 +76,7 @@
           round
           icon="logout"
           aria-label="Log out"
-          to="/auth/login"
+          @click="onLogout"
         />
       </q-toolbar>
     </q-header>
@@ -178,12 +178,19 @@ import { nextChannelPath } from '@/data/channels.js'
 import { fuzzyMatch } from '@/utils/fuzzy.js'
 import { statusOptions } from '@/utils/status.js'
 import { startTypingSimulation } from '@/data/typingSimulation.js'
+import { logout } from '@/services/auth.js'
 
 const $q = useQuasar()
 const route = useRoute()
 const router = useRouter()
 
 onMounted(startTypingSimulation)
+
+// Invalidating token
+async function onLogout() {
+  await logout()
+  router.push('/auth/login')
+}
 
 const drawerOpen = ref(false)
 const membersOpen = ref(false)
