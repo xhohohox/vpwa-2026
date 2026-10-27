@@ -306,14 +306,14 @@ function onKeydown(event) {
 }
 
 // Leaving a channel takes access away: a channel I am neither a member of nor
-// invited to cannot stay open
+// invited to cannot stay open. The server sends only my channels, so a channel
+// missing from the list is not mine either.
 watch(
   () => route.params.name,
   name => {
     const channel = channels.find(c => c.name === name)
-    if (!channel) return
-    const member = channel.members.includes(currentUser.nickName)
-    const invited = channel.invited.some(
+    const member = channel?.members.includes(currentUser.nickName)
+    const invited = channel?.invited.some(
       ([nick]) => nick === currentUser.nickName
     )
     const next = nextChannelPath()

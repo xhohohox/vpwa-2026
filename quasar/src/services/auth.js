@@ -1,5 +1,6 @@
 // Registration, login and logout against the API
 import { api, getToken, setToken } from '@/services/api.js'
+import { loadChannels } from '@/services/channels.js'
 import { currentUser } from '@/data/mock.js'
 
 export const isLoggedIn = () => Boolean(getToken())
@@ -17,25 +18,28 @@ function useUser(user) {
   })
 }
 
-function signIn({ user, token }) {
+// The chat opens only after my channels are loaded
+async function signIn({ user, token }) {
   setToken(token)
   useUser(user)
+  await loadChannels()
 }
 
 export async function login(email, password) {
-  signIn(
+  await signIn(
     await api('/auth/login', { method: 'POST', body: { email, password } })
   )
 }
 
 export async function signup(form) {
-  signIn(await api('/auth/signup', { method: 'POST', body: form }))
+  await signIn(await api('/auth/signup', { method: 'POST', body: form }))
 }
 
 // After reloading the page
 export async function loadProfile() {
   try {
     useUser(await api('/account/profile'))
+    await loadChannels()
   } catch (error) {
     // no longer valid token
     if (error.status === 401) setToken(null)
