@@ -1,4 +1,5 @@
-// Sample data for the clickable prototype (phase 1), replaced by the backend later.
+// Shared app state. Users and channels come from the server, the messages
+// are still sample data from the prototype (phase 1).
 // reactive() makes the data shared state: when the command line in the layout
 // adds a message, every component that imports `messages` re-renders.
 import { reactive } from 'vue'
@@ -13,85 +14,14 @@ export const currentUser = reactive({
 })
 
 // Other registered users and their status, shown in the member list (use case 9)
-export const users = reactive([
-  { nickName: 'zigo', status: 'online' },
-  { nickName: 'demitra', status: 'dnd' },
-  { nickName: 'satan', status: 'online' },
-  { nickName: 'ed', status: 'offline' },
-  { nickName: 'troll', status: 'online' }
-])
+// [{ nickName, status }], loaded from the server (services/channels.js)
+export const users = reactive([])
 
-// Channels in my list. Like the tables in the data model, every channel has
-// its members, banned users and votes to kick someone ({ nickName: [voters] }).
+// Channels in my list, loaded from the server (services/channels.js). Like the
+// tables in the data model, every channel has its members, banned users and
+// votes to kick someone ({ nickName: [voters] }).
 // invited  - [nickName, inviter] pairs with a pending invitation
-export const channels = reactive([
-  {
-    name: 'general',
-    isPrivate: false,
-    owner: 'zigo',
-    invited: [],
-    members: ['zigo', 'demitra', 'bondra2002', 'troll'],
-    banned: [],
-    // two members already voted to kick troll, the third vote bans him
-    kickVotes: { troll: ['zigo', 'demitra'] }
-  },
-  {
-    name: 'vpwa',
-    isPrivate: false,
-    owner: 'bondra2002',
-    invited: [],
-    members: ['bondra2002', 'demitra', 'ed'],
-    banned: [],
-    kickVotes: {}
-  },
-  {
-    name: 'team',
-    isPrivate: true,
-    owner: 'bondra2002',
-    invited: [],
-    members: ['bondra2002', 'satan'],
-    banned: [],
-    kickVotes: {}
-  },
-  {
-    name: 'random',
-    isPrivate: false,
-    owner: 'demitra',
-    invited: [['bondra2002', 'demitra']],
-    members: ['demitra', 'zigo'],
-    banned: [],
-    kickVotes: {}
-  },
-
-  // Existing channels I am not in, so /join has something to join
-  {
-    name: 'hokej',
-    isPrivate: false,
-    owner: 'satan',
-    invited: [],
-    members: ['satan', 'zigo'],
-    banned: [],
-    kickVotes: {}
-  },
-  {
-    name: 'tajne',
-    isPrivate: true,
-    owner: 'zigo',
-    invited: [],
-    members: ['zigo'],
-    banned: [],
-    kickVotes: {}
-  },
-  {
-    name: 'spam',
-    isPrivate: false,
-    owner: 'troll',
-    invited: [],
-    members: ['troll'],
-    banned: ['bondra2002'],
-    kickVotes: {}
-  }
-])
+export const channels = reactive([])
 
 // New messages get ids from a counter, so an id is never used twice
 let lastMessageId = 1000

@@ -13,9 +13,16 @@ export interface ApiDefinition {
   profile: {
     profile: {
       show: typeof routes['profile.profile.show']
+      update: typeof routes['profile.profile.update']
     }
     accessTokens: {
       destroy: typeof routes['profile.access_tokens.destroy']
     }
+  }
+  channels: {
+    index: typeof routes['channels.index']
+  }
+  users: {
+    index: typeof routes['users.index']
   }
 }
