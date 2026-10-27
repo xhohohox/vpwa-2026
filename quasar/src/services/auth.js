@@ -42,6 +42,11 @@ export async function loadProfile() {
   }
 }
 
+// Status and notification setting
+export async function updateSettings(settings) {
+  useUser(await api('/account/profile', { method: 'PATCH', body: settings }))
+}
+
 export async function logout() {
   try {
     await api('/account/logout', { method: 'POST' })

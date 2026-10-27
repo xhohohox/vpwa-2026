@@ -38,7 +38,7 @@
                 :active="currentUser.status === option.value"
                 clickable
                 v-close-popup
-                @click="currentUser.status = option.value"
+                @click="saveSettings({ status: option.value })"
               >
                 <q-item-section avatar>
                   <q-icon name="circle" :color="option.color" size="12px" />
@@ -63,7 +63,12 @@
                   </q-item-label>
                 </q-item-section>
                 <q-item-section side>
-                  <q-toggle v-model="currentUser.notifyMentionsOnly" />
+                  <q-toggle
+                    :model-value="currentUser.notifyMentionsOnly"
+                    @update:model-value="
+                      value => saveSettings({ notifyMentionsOnly: value })
+                    "
+                  />
                 </q-item-section>
               </q-item>
             </q-list>
@@ -178,7 +183,8 @@ import { nextChannelPath } from '@/data/channels.js'
 import { fuzzyMatch } from '@/utils/fuzzy.js'
 import { statusOptions } from '@/utils/status.js'
 import { startTypingSimulation } from '@/data/typingSimulation.js'
-import { logout } from '@/services/auth.js'
+import { logout, updateSettings } from '@/services/auth.js'
+import { errorText } from '@/services/api.js'
 
 const $q = useQuasar()
 const route = useRoute()
@@ -190,6 +196,14 @@ onMounted(startTypingSimulation)
 async function onLogout() {
   await logout()
   router.push('/auth/login')
+}
+
+async function saveSettings(settings) {
+  try {
+    await updateSettings(settings)
+  } catch (error) {
+    $q.notify({ type: 'negative', message: errorText(error) })
+  }
 }
 
 const drawerOpen = ref(false)
