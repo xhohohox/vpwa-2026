@@ -26,6 +26,11 @@ export const signupValidator = vine.create({
   passwordConfirmation: password().sameAs('password'),
 })
 
+export const settingsValidator = vine.create({
+  status: vine.enum(['online', 'dnd', 'offline']).optional(),
+  notifyMentionsOnly: vine.boolean().optional(),
+})
+
 /**
  * Validator to use before validating user credentials
  * during login
