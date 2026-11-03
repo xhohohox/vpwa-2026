@@ -10,6 +10,9 @@ export type ScannedRoutes = {
     'profile.profile.update': { paramsTuple?: []; params?: {} }
     'profile.access_tokens.destroy': { paramsTuple?: []; params?: {} }
     'channels.index': { paramsTuple?: []; params?: {} }
+    'channels.accept': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
+    'channels.leave': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
+    'channels.destroy': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
     'users.index': { paramsTuple?: []; params?: {} }
   }
   GET: {
@@ -26,9 +29,14 @@ export type ScannedRoutes = {
     'auth.new_account.store': { paramsTuple?: []; params?: {} }
     'auth.access_tokens.store': { paramsTuple?: []; params?: {} }
     'profile.access_tokens.destroy': { paramsTuple?: []; params?: {} }
+    'channels.accept': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
+    'channels.leave': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
   }
   PATCH: {
     'profile.profile.update': { paramsTuple?: []; params?: {} }
+  }
+  DELETE: {
+    'channels.destroy': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
   }
 }
 declare module '@adonisjs/core/types/http' {

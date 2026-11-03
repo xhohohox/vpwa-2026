@@ -21,6 +21,9 @@ export interface ApiDefinition {
   }
   channels: {
     index: typeof routes['channels.index']
+    accept: typeof routes['channels.accept']
+    leave: typeof routes['channels.leave']
+    destroy: typeof routes['channels.destroy']
   }
   users: {
     index: typeof routes['users.index']

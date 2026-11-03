@@ -17,4 +17,44 @@ export default class ChannelsController {
 
     return serialize(ChannelTransformer.transform(channels))
   }
+
+  async accept({ auth, params, response }: HttpContext) {
+    const user = auth.getUserOrFail()
+    const channel = await Channel.findByOrFail('name', params.name)
+
+    const invitation = channel
+      .related('users')
+      .pivotQuery()
+      .where('user_id', user.id)
+      .where('status', 'invited')
+
+    if (!(await invitation.clone().first())) {
+      return response.notFound({ errors: [{ message: `No invitation to #${channel.name}` }] })
+    }
+    await invitation.update({ status: 'member', joined_at: new Date() })
+
+    return response.noContent()
+  }
+
+  async leave({ auth, params, response }: HttpContext) {
+    const user = auth.getUserOrFail()
+    const channel = await Channel.findByOrFail('name', params.name)
+
+    if (channel.ownerId === user.id) await channel.delete()
+    else await channel.related('users').detach([user.id])
+
+    return response.noContent()
+  }
+
+  async destroy({ auth, params, response }: HttpContext) {
+    const user = auth.getUserOrFail()
+    const channel = await Channel.findByOrFail('name', params.name)
+
+    if (channel.ownerId !== user.id) {
+      return response.forbidden({ errors: [{ message: 'Only the admin can delete the channel' }] })
+    }
+    await channel.delete()
+
+    return response.noContent()
+  }
 }

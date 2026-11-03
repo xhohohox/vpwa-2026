@@ -100,12 +100,13 @@ import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { currentUser, channels } from '@/data/mock.js'
+import { nextChannelPath } from '@/data/channels.js'
 import {
-  joinChannel,
+  acceptInvitation,
   leaveChannel,
-  quitChannel,
-  nextChannelPath
-} from '@/data/channels.js'
+  deleteChannel
+} from '@/services/channels.js'
+import { errorText } from '@/services/api.js'
 import ChannelCreateDialog from '@/components/ChannelCreateDialog.vue'
 import ChannelDetails from '@/components/ChannelDetails.vue'
 
@@ -148,17 +149,27 @@ function openDetails(channel) {
   detailsOpen.value = true
 }
 
+// Changes are saved on the server, when it fails the list stays as it was
+async function save(action) {
+  try {
+    await action()
+    return true
+  } catch (error) {
+    $q.notify({ type: 'negative', message: errorText(error) })
+    return false
+  }
+}
+
 // --- Invitations ---
 
-function accept(channel) {
-  joinChannel(currentUser.nickName, channel.name)
-  router.push(`/channels/${channel.name}`)
+async function accept(channel) {
+  if (await save(() => acceptInvitation(channel.name))) {
+    router.push(`/channels/${channel.name}`)
+  }
 }
 
 function decline(channel) {
-  channel.invited = channel.invited.filter(
-    ([nick]) => nick !== currentUser.nickName
-  )
+  save(() => leaveChannel(channel.name))
 }
 
 // Clicking a channel opens it; an invitation has to be accepted first
@@ -177,9 +188,10 @@ function leave(channel) {
     owner
       ? 'You are the admin, so leaving deletes the channel for everyone.'
       : leaveMessage(channel),
-    () => {
-      leaveChannel(currentUser.nickName, channel.name)
-      goAwayFrom(channel.name)
+    async () => {
+      if (await save(() => leaveChannel(channel.name))) {
+        goAwayFrom(channel.name)
+      }
     }
   )
 }
@@ -194,9 +206,10 @@ function remove(channel) {
   confirmThen(
     `Delete #${channel.name}?`,
     'The channel and its messages will be deleted for everyone.',
-    () => {
-      quitChannel(currentUser.nickName, channel.name)
-      goAwayFrom(channel.name)
+    async () => {
+      if (await save(() => deleteChannel(channel.name))) {
+        goAwayFrom(channel.name)
+      }
     }
   )
 }

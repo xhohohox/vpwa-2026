@@ -42,6 +42,24 @@ const routes = {
     tokens: [[0,"api"],[0,"v1"],[0,"channels"]],
     types: placeholder as Registry['channels.index']['types'],
   },
+  'channels.accept': {
+    methods: ["POST"],
+    pattern: '/api/v1/channels/:name/accept',
+    tokens: [[0,"api"],[0,"v1"],[0,"channels"],[1,"name"],[0,"accept"]],
+    types: placeholder as Registry['channels.accept']['types'],
+  },
+  'channels.leave': {
+    methods: ["POST"],
+    pattern: '/api/v1/channels/:name/leave',
+    tokens: [[0,"api"],[0,"v1"],[0,"channels"],[1,"name"],[0,"leave"]],
+    types: placeholder as Registry['channels.leave']['types'],
+  },
+  'channels.destroy': {
+    methods: ["DELETE"],
+    pattern: '/api/v1/channels/:name',
+    tokens: [[0,"api"],[0,"v1"],[0,"channels"],[1,"name"]],
+    types: placeholder as Registry['channels.destroy']['types'],
+  },
   'users.index': {
     methods: ["GET","HEAD"],
     pattern: '/api/v1/users',
