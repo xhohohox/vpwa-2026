@@ -41,15 +41,22 @@
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
-import { currentUser, messages } from '@/data/mock.js'
+import { currentUser, channels, messages } from '@/data/mock.js'
 
 const PAGE_SIZE = 15
 
 const route = useRoute()
 
-const channelMessages = computed(() =>
-  messages.filter(message => message.channel === route.params.name)
-)
+// Messages only from a channel I am a member of
+const channelMessages = computed(() => {
+  const member = channels.some(
+    channel =>
+      channel.name === route.params.name &&
+      channel.members.includes(currentUser.nickName)
+  )
+  if (!member) return []
+  return messages.filter(message => message.channel === route.params.name)
+})
 
 // Complete history with infinite scroll (use case 7): only the newest messages
 // are rendered, older ones are added in batches when scrolling up
