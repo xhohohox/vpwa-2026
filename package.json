@@ -7,7 +7,10 @@
     "db:start": "bash scripts/db-local.sh start",
     "db:stop": "bash scripts/db-local.sh stop",
     "db:start:docker": "docker compose up -d",
-    "db:init": "node scripts/db-init.mjs"
+    "db:init": "node scripts/db-init.mjs",
+    "db:migrate": "npm --prefix backend run db:migrate",
+    "db:seed": "npm --prefix backend run db:seed",
+    "db:fresh": "npm --prefix backend run db:fresh"
   },
   "dependencies": {
     "pg": "^8.16.0"
