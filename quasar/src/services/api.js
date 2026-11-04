@@ -35,7 +35,7 @@ export async function api(path, { method = 'GET', body } = {}) {
 
   if (!response.ok) {
     const messages = data.errors?.map(error => error.message) ?? [
-      response.statusText
+      data.message ?? response.statusText
     ]
     throw new ApiError(response.status, messages)
   }

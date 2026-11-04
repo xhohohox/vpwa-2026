@@ -141,14 +141,9 @@
 import { ref, computed } from 'vue'
 import { useQuasar } from 'quasar'
 import { currentUser } from '@/data/mock.js'
-import {
-  kick,
-  invite,
-  uninvite,
-  leaveChannel,
-  quitChannel,
-  kickVotesRequired
-} from '@/data/channels.js'
+import { kick, invite, uninvite, kickVotesRequired } from '@/data/channels.js'
+import { leaveChannel } from '@/services/channels.js'
+import { errorText } from '@/services/api.js'
 import UserSelect from '@/components/UserSelect.vue'
 
 const props = defineProps({
@@ -237,17 +232,20 @@ function quitMessage() {
 
 function quitNow() {
   const channel = props.channel
-  const admin = isMyAdmin.value
   $q.dialog({
     title: `Leave #${channel.name}?`,
     message: quitMessage(),
     cancel: true,
     persistent: true
-  }).onOk(() => {
-    const closed = run(() =>
-      admin ? quitChannel(nick, channel.name) : leaveChannel(nick, channel.name)
-    )
-    if (!closed) return
+  }).onOk(async () => {
+    error.value = ''
+    try {
+      // on the server the admin leaving closes the channel
+      await leaveChannel(channel.name)
+    } catch (e) {
+      error.value = errorText(e)
+      return
+    }
     model.value = false
     emit('left', channel.name)
   })

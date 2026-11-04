@@ -38,6 +38,9 @@ router
     router
       .group(() => {
         router.get('channels', [controllers.Channels, 'index'])
+        router.post('channels/:name/accept', [controllers.Channels, 'accept'])
+        router.post('channels/:name/leave', [controllers.Channels, 'leave'])
+        router.delete('channels/:name', [controllers.Channels, 'destroy'])
         router.get('users', [controllers.Users, 'index'])
       })
       .use(middleware.auth())
