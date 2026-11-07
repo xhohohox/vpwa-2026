@@ -21,9 +21,20 @@ export interface ApiDefinition {
   }
   channels: {
     index: typeof routes['channels.index']
+    join: typeof routes['channels.join']
     accept: typeof routes['channels.accept']
     leave: typeof routes['channels.leave']
     destroy: typeof routes['channels.destroy']
+  }
+  channelMembers: {
+    invite: typeof routes['channel_members.invite']
+    uninvite: typeof routes['channel_members.uninvite']
+    revoke: typeof routes['channel_members.revoke']
+    kick: typeof routes['channel_members.kick']
+  }
+  messages: {
+    index: typeof routes['messages.index']
+    store: typeof routes['messages.store']
   }
   users: {
     index: typeof routes['users.index']
