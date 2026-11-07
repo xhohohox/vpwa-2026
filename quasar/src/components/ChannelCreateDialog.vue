@@ -4,6 +4,14 @@
       <q-form @submit="create">
         <q-card-section class="text-h6">Create channel</q-card-section>
         <q-card-section>
+          <q-banner
+            v-if="error"
+            dense
+            rounded
+            class="bg-red-1 text-negative q-mb-md"
+          >
+            {{ error }}
+          </q-banner>
           <q-input
             v-model="name"
             label="Channel name"
@@ -25,7 +33,13 @@
         </q-card-section>
         <q-card-actions align="right">
           <q-btn flat label="Cancel" v-close-popup />
-          <q-btn type="submit" color="primary" unelevated label="Create" />
+          <q-btn
+            type="submit"
+            color="primary"
+            unelevated
+            label="Create"
+            :loading="loading"
+          />
         </q-card-actions>
       </q-form>
     </q-card>
@@ -35,27 +49,44 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { currentUser, channels } from '@/data/mock.js'
+import { useQuasar } from 'quasar'
+import { channels } from '@/data/mock.js'
 import { required, noSpaces } from '@/utils/validation.js'
-import { joinChannel, invite } from '@/data/channels.js'
+import { joinChannel, inviteUser } from '@/services/channels.js'
+import { errorText } from '@/services/api.js'
 import UserSelect from '@/components/UserSelect.vue'
 
 const model = defineModel()
 const router = useRouter()
+const $q = useQuasar()
 
 const name = ref('')
 const isPrivate = ref(false)
 const invitees = ref([])
+const error = ref('')
+const loading = ref(false)
 
-// channelName is unique
+// channelName is unique, the server checks also the channels I am not in
 const isUnique = val =>
   !channels.some(channel => channel.name === val) || 'Channel already exists'
 
-function create() {
-  joinChannel(currentUser.nickName, name.value, {
-    isPrivate: isPrivate.value
-  })
-  invitees.value.forEach(nick => invite(currentUser.nickName, name.value, nick))
+// The same as /join channelName [private], then the selected users are invited
+async function create() {
+  error.value = ''
+  loading.value = true
+  try {
+    const { result } = await joinChannel(name.value, isPrivate.value)
+    for (const nick of invitees.value) await inviteUser(name.value, nick)
+    // a public channel with this name already existed, so I joined it
+    if (result === 'joined') {
+      $q.notify({ message: `#${name.value} already existed, you joined it` })
+    }
+  } catch (e) {
+    error.value = errorText(e)
+    return
+  } finally {
+    loading.value = false
+  }
   router.push(`/channels/${name.value}`)
 
   model.value = false

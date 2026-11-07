@@ -164,33 +164,41 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import ChannelList from '@/components/ChannelList.vue'
 import CommandSuggestions from '@/components/CommandSuggestions.vue'
 import MembersDialog from '@/components/MembersDialog.vue'
 import TypingIndicator from '@/components/TypingIndicator.vue'
-import {
-  currentUser,
-  channels,
-  messages,
-  nextMessageId,
-  users
-} from '@/data/mock.js'
+import { currentUser, channels, users } from '@/data/mock.js'
 import { runCommand, matchCommands } from '@/data/commands.js'
 import { nextChannelPath } from '@/data/channels.js'
 import { fuzzyMatch } from '@/utils/fuzzy.js'
 import { statusOptions } from '@/utils/status.js'
 import { startTypingSimulation } from '@/data/typingSimulation.js'
 import { logout, updateSettings } from '@/services/auth.js'
+import { loadChannels } from '@/services/channels.js'
+import { sendMessage, addMessages } from '@/services/messages.js'
 import { errorText } from '@/services/api.js'
 
 const $q = useQuasar()
 const route = useRoute()
 const router = useRouter()
 
-onMounted(startTypingSimulation)
+// Until the WebSockets, the channel list is asked for every few seconds,
+// so new invitations, bans and statuses show up without a reload.
+// Offline, nothing comes until going online again (use case 9)
+const REFRESH_MS = 3000
+let timer
+
+onMounted(() => {
+  startTypingSimulation()
+  timer = setInterval(() => {
+    if (currentUser.status !== 'offline') loadChannels().catch(() => {})
+  }, REFRESH_MS)
+})
+onUnmounted(() => clearInterval(timer))
 
 // Invalidating token
 async function onLogout() {
@@ -305,45 +313,47 @@ function onKeydown(event) {
   }
 }
 
-// Leaving a channel takes access away: a channel I am neither a member of nor
-// invited to cannot stay open. The server sends only my channels, so a channel
-// missing from the list is not mine either.
+// Leaving a channel or a ban takes access away
+const canOpen = computed(() => {
+  const channel = channels.find(c => c.name === route.params.name)
+  const member = channel?.members.includes(currentUser.nickName)
+  const invited = channel?.invited.some(
+    ([nick]) => nick === currentUser.nickName
+  )
+  return Boolean(member || invited)
+})
+
 watch(
-  () => route.params.name,
-  name => {
-    const channel = channels.find(c => c.name === name)
-    const member = channel?.members.includes(currentUser.nickName)
-    const invited = channel?.invited.some(
-      ([nick]) => nick === currentUser.nickName
-    )
+  canOpen,
+  allowed => {
     const next = nextChannelPath()
-    if (!member && !invited && next !== '/') router.replace(next)
+    if (!allowed && next !== '/') router.replace(next)
   },
   { immediate: true }
 )
 
 // The command line: text starting with / is a command, anything else a message
-function send() {
+async function send() {
   const text = draft.value.trim()
   if (!text) return
 
   if (text.startsWith('/')) {
-    runAndShow(text)
+    await runAndShow(text)
     return
   }
 
-  messages.push({
-    id: nextMessageId(),
-    channel: route.params.name,
-    author: currentUser.nickName,
-    text,
-    createdAt: new Date()
-  })
+  // a message that was not sent stays in the command line to try again
   draft.value = ''
+  try {
+    addMessages([await sendMessage(route.params.name, text)])
+  } catch (error) {
+    draft.value = text
+    $q.notify({ type: 'negative', message: errorText(error) })
+  }
 }
 
-function runAndShow(text) {
-  const result = runCommand(text, route.params.name)
+async function runAndShow(text) {
+  const result = await runCommand(text, route.params.name)
 
   // A failed command stays in the command line, so it can be fixed
   if (!result.ok) {

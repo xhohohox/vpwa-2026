@@ -142,10 +142,15 @@ const createOpen = ref(false)
 // --- Details ---
 
 const detailsOpen = ref(false)
-const detailsChannel = ref(null)
+const detailsName = ref('')
+
+// Found by name, so the dialog shows the list loaded again after every change
+const detailsChannel = computed(() =>
+  channels.find(channel => channel.name === detailsName.value)
+)
 
 function openDetails(channel) {
-  detailsChannel.value = channel
+  detailsName.value = channel.name
   detailsOpen.value = true
 }
 

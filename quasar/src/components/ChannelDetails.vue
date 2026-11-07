@@ -141,8 +141,13 @@
 import { ref, computed } from 'vue'
 import { useQuasar } from 'quasar'
 import { currentUser } from '@/data/mock.js'
-import { kick, invite, uninvite, kickVotesRequired } from '@/data/channels.js'
-import { leaveChannel } from '@/services/channels.js'
+import { kickVotesRequired } from '@/data/channels.js'
+import {
+  leaveChannel,
+  inviteUser,
+  uninviteUser,
+  kickUser
+} from '@/services/channels.js'
 import { errorText } from '@/services/api.js'
 import UserSelect from '@/components/UserSelect.vue'
 
@@ -189,36 +194,38 @@ function canKick(member) {
   return isMyAdmin.value || !props.channel.isPrivate
 }
 
-function run(action) {
+// The server checks the rules, its message is shown in the dialog
+async function run(action) {
   error.value = ''
   try {
-    action()
+    await action()
     return true
   } catch (e) {
-    error.value = e.message
+    error.value = errorText(e)
     return false
   }
 }
 
 function kickMember(member) {
-  run(() => kick(nick, props.channel.name, member))
+  run(() => kickUser(props.channel.name, member))
 }
 
 function uninviteMember(invitedNick) {
-  run(() => uninvite(nick, props.channel.name, invitedNick))
+  run(() => uninviteUser(props.channel.name, invitedNick))
 }
 
-function sendInvites() {
+async function sendInvites() {
+  const name = props.channel.name
   const selected = [...invitees.value]
-  const done = run(() => {
-    selected.forEach(nickName => invite(nick, props.channel.name, nickName))
+  const done = await run(async () => {
+    for (const nickName of selected) await inviteUser(name, nickName)
   })
   if (done) invitees.value = []
 }
 
 // The admin lifting the ban restores access (the user gets an invitation)
 function restoreMember(nickName) {
-  run(() => invite(nick, props.channel.name, nickName))
+  run(() => inviteUser(props.channel.name, nickName))
 }
 
 function quitMessage() {

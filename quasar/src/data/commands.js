@@ -1,14 +1,15 @@
 // Commands typed into the command line (use cases 4, 5, 10).
 import { currentUser, channels } from '@/data/mock.js'
+import { kickVotesRequired } from '@/data/channels.js'
 import {
   joinChannel,
   leaveChannel,
-  invite as inviteUser,
-  revoke as revokeUser,
-  kick as kickUser,
-  quitChannel,
-  kickVotesRequired
-} from '@/data/channels.js'
+  deleteChannel,
+  inviteUser,
+  revokeUser,
+  kickUser
+} from '@/services/channels.js'
+import { errorText } from '@/services/api.js'
 
 // Available commands with a short description, shown as suggestions while
 // typing. Later this list can come from the server.
@@ -60,7 +61,7 @@ const HELP = 'Commands: ' + commandList.map(command => command.name).join(', ')
 const ok = (text, extra = {}) => ({ ok: true, text, ...extra })
 const fail = text => ({ ok: false, text })
 
-export function runCommand(input, openChannelName) {
+export async function runCommand(input, openChannelName) {
   // "/join hokej private" -> name "/join", args ["hokej", "private"]
   // a nickName can be written with or without the leading @
   const parts = input.trim().split(/\s+/)
@@ -71,114 +72,84 @@ export function runCommand(input, openChannelName) {
     c => c.name === openChannelName && c.members.includes(me)
   )
 
-  if (name === '/join') return join(args[0], args[1] === 'private')
-  if (!channel) return fail('Open a channel you are a member of first')
+  try {
+    if (name === '/join') return await join(args[0], args[1] === 'private')
+    if (!channel) return fail('Open a channel you are a member of first')
 
-  switch (name) {
-    case '/invite':
-      return invite(channel, args[0])
-    case '/revoke':
-      return revoke(channel, args[0])
-    case '/kick':
-      return kick(channel, args[0])
-    case '/quit':
-      return quit(channel)
-    case '/cancel':
-      return cancel(channel)
-    case '/list':
-      return ok('', { showMembers: true })
-    default:
-      return fail(`Unknown command ${name}. ${HELP}`)
+    switch (name) {
+      case '/invite':
+        return await invite(channel, args[0])
+      case '/revoke':
+        return await revoke(channel, args[0])
+      case '/kick':
+        return await kick(channel, args[0])
+      case '/quit':
+        return await quit(channel)
+      case '/cancel':
+        return await cancel(channel)
+      case '/list':
+        return ok('', { showMembers: true })
+      default:
+        return fail(`Unknown command ${name}. ${HELP}`)
+    }
+  } catch (error) {
+    // the server checks the rules, its message says what is not allowed
+    return fail(errorText(error))
   }
 }
 
 // /join channelName [private]
-function join(name, isPrivate) {
+async function join(name, isPrivate) {
   if (!name) return fail('Usage: /join channelName [private]')
-  const me = currentUser.nickName
 
-  const existing = channels.find(c => c.name === name)
-  const wasMember = existing?.members.includes(me)
-  try {
-    joinChannel(me, name, { isPrivate })
-  } catch (e) {
-    return fail(e.message)
+  const { result } = await joinChannel(name, isPrivate)
+  const text = {
+    member: `You are already in #${name}`,
+    joined: `You joined #${name}`,
+    created: `Created ${isPrivate ? 'private' : 'public'} channel #${name}`
   }
-
-  if (wasMember) return ok(`You are already in #${name}`, { open: name })
-  if (existing) return ok(`You joined #${name}`, { open: name })
-  const type = isPrivate ? 'private' : 'public'
-  return ok(`Created ${type} channel #${name}`, { open: name })
+  return ok(text[result], { open: name })
 }
 
 // /invite nickName
-function invite(channel, nick) {
-  const me = currentUser.nickName
+async function invite(channel, nick) {
   if (!nick) return fail('Usage: /invite nickName')
 
-  const unbanned = channel.banned.includes(nick)
-  try {
-    inviteUser(me, channel.name, nick)
-  } catch (e) {
-    return fail(e.message)
-  }
+  const { unbanned } = await inviteUser(channel.name, nick)
   const what = unbanned ? 'unbanned and invited' : 'invited'
   return ok(`${nick} was ${what} to #${channel.name}`)
 }
 
 // /revoke nickName - the admin takes access away (invitation or membership)
-function revoke(channel, nick) {
-  const me = currentUser.nickName
+async function revoke(channel, nick) {
   if (!nick) return fail('Usage: /revoke nickName')
-  try {
-    revokeUser(me, channel.name, nick)
-  } catch (e) {
-    return fail(e.message)
-  }
+
+  await revokeUser(channel.name, nick)
   return ok(`${nick} was removed from #${channel.name}`)
 }
 
 // /kick nickName - the admin bans at once, members vote (3 votes = ban)
-function kick(channel, nick) {
-  const me = currentUser.nickName
+async function kick(channel, nick) {
   if (!nick) return fail('Usage: /kick nickName')
-  const required = kickVotesRequired(channel)
-  const voted = channel.kickVotes[nick]?.includes(me) ?? false
 
-  try {
-    kickUser(me, channel.name, nick)
-  } catch (e) {
-    return fail(e.message)
-  }
-
-  if (channel.banned.includes(nick)) {
-    return ok(`${nick} was banned from #${channel.name}`)
-  }
-  if (voted) return ok(`Your vote to kick ${nick} was taken back`)
-  const votes = channel.kickVotes[nick]?.length ?? 0
+  const { banned, undone, votes } = await kickUser(channel.name, nick)
+  if (banned) return ok(`${nick} was banned from #${channel.name}`)
+  if (undone) return ok(`Your vote to kick ${nick} was taken back`)
+  const required = kickVotesRequired()
   return ok(`Your vote to kick ${nick} was counted (${votes}/${required})`)
 }
 
 // /quit - the admin closes the channel
-function quit(channel) {
-  const me = currentUser.nickName
-  try {
-    quitChannel(me, channel.name)
-  } catch (e) {
-    return fail(e.message)
-  }
+async function quit(channel) {
+  await deleteChannel(channel.name)
   return ok(`#${channel.name} was closed`, { leftChannel: true })
 }
 
 // /cancel - leave the channel; when the admin leaves, the channel is closed
-function cancel(channel) {
-  const me = currentUser.nickName
-  const owner = channel.owner === me
-  try {
-    leaveChannel(me, channel.name)
-  } catch (e) {
-    return fail(e.message)
-  }
+async function cancel(channel) {
+  const owner = channel.owner === currentUser.nickName
+
+  await leaveChannel(channel.name)
   const text = owner
     ? `You left #${channel.name}, so it was closed`
     : `You left #${channel.name}`
