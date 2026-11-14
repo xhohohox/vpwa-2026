@@ -1,4 +1,4 @@
-// My channels and the other users from the database (use cases 2, 5, 9)
+// My channels and the other users from the database (use cases 2, 4, 5, 9)
 import { api } from '@/services/api.js'
 import { channels, users } from '@/data/mock.js'
 
@@ -12,13 +12,37 @@ export async function loadChannels() {
   users.splice(0, users.length, ...otherUsers)
 }
 
-async function change(method, name, action = '') {
-  await api(`/channels/${encodeURIComponent(name)}${action}`, { method })
+const channelPath = name => `/channels/${encodeURIComponent(name)}`
+
+// The server saves the change, then my list is loaded again
+async function change(method, path, body) {
+  const result = await api(path, { method, body })
   await loadChannels()
+  return result
 }
 
-export const acceptInvitation = name => change('POST', name, '/accept')
+// /join channelName [private], the result says "created", "joined" or "member"
+export const joinChannel = (name, isPrivate = false) =>
+  change('POST', '/channels', { name, private: isPrivate })
 
-export const leaveChannel = name => change('POST', name, '/leave')
+export const acceptInvitation = name =>
+  change('POST', channelPath(name) + '/accept')
 
-export const deleteChannel = name => change('DELETE', name)
+// /cancel, also declines an invitation, the admin leaving deletes the channel
+export const leaveChannel = name => change('POST', channelPath(name) + '/leave')
+
+// /quit
+export const deleteChannel = name => change('DELETE', channelPath(name))
+
+// /invite, /revoke, /kick and taking an invitation back
+export const inviteUser = (name, nickName) =>
+  change('POST', channelPath(name) + '/invite', { nickName })
+
+export const uninviteUser = (name, nickName) =>
+  change('POST', channelPath(name) + '/uninvite', { nickName })
+
+export const revokeUser = (name, nickName) =>
+  change('POST', channelPath(name) + '/revoke', { nickName })
+
+export const kickUser = (name, nickName) =>
+  change('POST', channelPath(name) + '/kick', { nickName })

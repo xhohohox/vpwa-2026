@@ -1,7 +1,7 @@
-// Prototype only: without a backend nobody else is online, so this script
-// pretends that other users type and send messages (use case 11).
-// Later the backend will send the same data over WebSockets.
-import { currentUser, messages, typing, nextMessageId } from '@/data/mock.js'
+// Prototype only: this script pretends that other users type (use case 11).
+// The messages themselves come from the server, the typing will come over
+// WebSockets later.
+import { currentUser, typing } from '@/data/mock.js'
 
 const script = [
   { channel: 'general', nickName: 'zigo', text: 'Kto ide zajtra na trening?' },
@@ -45,13 +45,5 @@ export async function startTypingSimulation() {
     await sleep(1000)
 
     typing.splice(typing.indexOf(typist), 1)
-    await waitUntilOnline()
-    messages.push({
-      id: nextMessageId(),
-      channel,
-      author: nickName,
-      text,
-      createdAt: new Date()
-    })
   }
 }

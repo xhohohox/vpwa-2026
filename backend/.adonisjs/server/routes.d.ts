@@ -10,27 +10,42 @@ export type ScannedRoutes = {
     'profile.profile.update': { paramsTuple?: []; params?: {} }
     'profile.access_tokens.destroy': { paramsTuple?: []; params?: {} }
     'channels.index': { paramsTuple?: []; params?: {} }
+    'channels.join': { paramsTuple?: []; params?: {} }
     'channels.accept': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
     'channels.leave': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
     'channels.destroy': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
+    'channel_members.invite': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
+    'channel_members.uninvite': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
+    'channel_members.revoke': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
+    'channel_members.kick': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
+    'messages.index': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
+    'messages.store': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
     'users.index': { paramsTuple?: []; params?: {} }
   }
   GET: {
     'profile.profile.show': { paramsTuple?: []; params?: {} }
     'channels.index': { paramsTuple?: []; params?: {} }
+    'messages.index': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
     'users.index': { paramsTuple?: []; params?: {} }
   }
   HEAD: {
     'profile.profile.show': { paramsTuple?: []; params?: {} }
     'channels.index': { paramsTuple?: []; params?: {} }
+    'messages.index': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
     'users.index': { paramsTuple?: []; params?: {} }
   }
   POST: {
     'auth.new_account.store': { paramsTuple?: []; params?: {} }
     'auth.access_tokens.store': { paramsTuple?: []; params?: {} }
     'profile.access_tokens.destroy': { paramsTuple?: []; params?: {} }
+    'channels.join': { paramsTuple?: []; params?: {} }
     'channels.accept': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
     'channels.leave': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
+    'channel_members.invite': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
+    'channel_members.uninvite': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
+    'channel_members.revoke': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
+    'channel_members.kick': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
+    'messages.store': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
   }
   PATCH: {
     'profile.profile.update': { paramsTuple?: []; params?: {} }

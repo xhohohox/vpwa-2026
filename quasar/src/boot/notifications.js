@@ -23,7 +23,7 @@ function shouldNotify(message) {
   if (currentUser.status !== 'online') return false
   if (
     currentUser.notifyMentionsOnly &&
-    !message.text.includes(`@${currentUser.nickName}`)
+    !message.mentions.includes(currentUser.nickName)
   ) {
     return false
   }
@@ -42,10 +42,11 @@ export default defineBoot(({ router }) => {
     { once: true }
   )
 
+  // only a newly arrived message, not the history of an opened channel
   watch(
-    () => messages.length,
-    (newLength, oldLength) => {
-      if (newLength <= oldLength) return
+    () => messages.at(-1)?.id,
+    (id, oldId) => {
+      if (!id || !oldId || id <= oldId) return
       const message = messages.at(-1)
       if (!shouldNotify(message)) return
 
