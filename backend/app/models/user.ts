@@ -9,7 +9,12 @@ import Channel from '#models/channel'
 import Message from '#models/message'
 import RuleException from '#exceptions/rule_exception'
 
-export default class User extends compose(UserSchema, withAuthFinder(hash)) {
+// The hash service is resolved lazily (() => hash.use()): @rlanz/socket imports the websocket
+// channels, and through them this model, before the application is booted
+export default class User extends compose(
+  UserSchema,
+  withAuthFinder(() => hash.use())
+) {
   static accessTokens = DbAccessTokensProvider.forModel(User)
   declare currentAccessToken?: AccessToken
 
