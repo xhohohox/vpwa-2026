@@ -1,68 +1,8 @@
-// Notification about every new message (use case 8)
-// https://quasar.dev/quasar-plugins/app-visibility
-// https://developer.mozilla.org/en-US/docs/Web/API/Notification
-import { watch } from 'vue'
-import { AppVisibility } from 'quasar'
+// Prepares the notifications about new messages (use case 8) before the app starts
+// https://quasar.dev/quasar-cli-vite/boot-files
 import { defineBoot } from '#q-app'
-import { currentUser, channels, messages } from '@/data/mock.js'
-
-const PREVIEW_LENGTH = 80
-
-function shouldNotify(message) {
-  if (message.author === currentUser.nickName) return false
-  // Only from channels I am a member of (not after leaving or being invited)
-  const mine = channels.some(
-    channel =>
-      channel.name === message.channel &&
-      channel.members.includes(currentUser.nickName)
-  )
-  if (!mine) return false
-  // Only when the app is not visible (another tab, minimized window)
-  if (AppVisibility.appVisible) return false
-  // DND: no notifications, offline: no messages at all (use case 9)
-  if (currentUser.status !== 'online') return false
-  if (
-    currentUser.notifyMentionsOnly &&
-    !message.mentions.includes(currentUser.nickName)
-  ) {
-    return false
-  }
-  return Notification.permission === 'granted'
-}
+import { initNotifications } from '@/services/notifications.js'
 
 export default defineBoot(({ router }) => {
-  if (!('Notification' in window)) return
-
-  document.addEventListener(
-    'click',
-    () => {
-      if (Notification.permission === 'default')
-        Notification.requestPermission()
-    },
-    { once: true }
-  )
-
-  // only a newly arrived message, not the history of an opened channel
-  watch(
-    () => messages.at(-1)?.id,
-    (id, oldId) => {
-      if (!id || !oldId || id <= oldId) return
-      const message = messages.at(-1)
-      if (!shouldNotify(message)) return
-
-      const text =
-        message.text.length > PREVIEW_LENGTH
-          ? message.text.slice(0, PREVIEW_LENGTH) + '...'
-          : message.text
-      const notification = new Notification(
-        `${message.author} in #${message.channel}`,
-        { body: text }
-      )
-
-      notification.onclick = () => {
-        window.focus()
-        router.push(`/channels/${message.channel}`)
-      }
-    }
-  )
+  initNotifications(router)
 })

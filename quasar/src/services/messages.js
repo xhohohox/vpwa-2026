@@ -1,6 +1,7 @@
 // Messages of the open channel from the database (use cases 3, 6, 7)
 import { api } from '@/services/api.js'
-import { messages } from '@/data/mock.js'
+import { notifyMessage } from '@/services/notifications.js'
+import { currentUser, messages } from '@/data/mock.js'
 
 const messagesPath = name => `/channels/${encodeURIComponent(name)}/messages`
 
@@ -25,10 +26,17 @@ export async function sendMessage(name, text) {
   return withDate(message)
 }
 
-// Sending and asking for new messages can bring the same message twice,
+// Sending and the websocket can bring the same message twice,
 // the list stays sorted from the oldest
 export function addMessages(list) {
   const known = new Set(messages.map(message => message.id))
   messages.push(...list.filter(message => !known.has(message.id)))
   messages.sort((a, b) => a.id - b.id)
+}
+
+export function receiveMessage(data) {
+  if (currentUser.status === 'offline') return
+  const message = withDate(data)
+  addMessages([message])
+  notifyMessage(message)
 }

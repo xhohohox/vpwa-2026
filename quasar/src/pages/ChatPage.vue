@@ -42,13 +42,11 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { currentUser, channels, messages } from '@/data/mock.js'
 import { loadMessages, addMessages } from '@/services/messages.js'
-
-// Until the WebSockets, new messages are asked for every few seconds
-const POLL_MS = 3000
+import { connection } from '@/services/socket.js'
 
 const route = useRoute()
 
@@ -114,8 +112,10 @@ async function loadOlder(_index, done) {
   done()
 }
 
-// An offline user receives nothing until they go online again (use case 9)
-async function loadNewer() {
+// New messages come over the websocket (services/socket.js). This loads what
+// was missed: an offline user receives nothing until they go online again
+// (use case 9), and a lost connection connects again after a while.
+async function loadMissed() {
   const name = route.params.name
   if (!loaded.value || !isMember(name) || currentUser.status === 'offline')
     return
@@ -124,15 +124,12 @@ async function loadNewer() {
     const newer = await loadMessages(name, newest ? { after: newest.id } : {})
     if (route.params.name === name) addMessages(newer)
   } catch {
-    // the next try comes in a few seconds
+    // the server is not reachable, the next connection tries again
   }
 }
 
-let timer
-onMounted(() => {
-  timer = setInterval(loadNewer, POLL_MS)
-})
-onUnmounted(() => clearInterval(timer))
+watch(() => currentUser.status, loadMissed)
+watch(() => connection.count, loadMissed)
 
 // Keep the newest message in view when one arrives, unless the user
 // is reading older history (then only their own message scrolls down)
