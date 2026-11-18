@@ -2,6 +2,7 @@ import Channel from '#models/channel'
 import Message from '#models/message'
 import MessageTransformer from '#transformers/message_transformer'
 import { messageValidator } from '#validators/channel'
+import { pushMessage } from '#services/push'
 import type { HttpContext } from '@adonisjs/core/http'
 import { DateTime } from 'luxon'
 
@@ -46,16 +47,12 @@ export default class MessagesController {
       content: text,
     })
 
+    const members = await channel.related('users').query().wherePivot('status', 'member')
+
     // "@zigo, ahoj" -> zigo
     const nickNames = [...text.matchAll(/@([^\s.,!?;:]+)/g)].map((match) => match[1])
-    if (nickNames.length) {
-      const mentioned = await channel
-        .related('users')
-        .query()
-        .whereIn('users.nick_name', nickNames)
-        .wherePivot('status', 'member')
-      await message.related('mentions').attach(mentioned.map((member) => member.id))
-    }
+    const mentioned = members.filter((member) => nickNames.includes(member.nickName))
+    await message.related('mentions').attach(mentioned.map((member) => member.id))
 
     // the channel is active, so it does not cease after 30 days (use case 2)
     channel.lastActivityAt = DateTime.now()
@@ -64,6 +61,13 @@ export default class MessagesController {
     await message.load('channel')
     await message.load('author')
     await message.load('mentions')
-    return serialize(MessageTransformer.transform(message))
+    const body = await serialize(MessageTransformer.transform(message))
+
+    // the members get the message at once over their websocket, an offline user
+    // gets nothing until going online again (use case 9)
+    for (const member of members) {
+      if (member.status !== 'offline') pushMessage(member, body.data)
+    }
+    return body
   }
 }

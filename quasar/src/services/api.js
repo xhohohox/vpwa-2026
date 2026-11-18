@@ -1,6 +1,8 @@
 // Calls to the AdonisJS API (backend/)
 // https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
-const API_URL = 'http://localhost:3333/api/v1'
+// the websocket connects to the same server (services/socket.js)
+export const SERVER_URL = 'http://localhost:3333'
+const API_URL = SERVER_URL + '/api/v1'
 const TOKEN_KEY = 'vpwa-token'
 
 // The token from login is kept in localStorage

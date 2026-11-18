@@ -164,7 +164,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import ChannelList from '@/components/ChannelList.vue'
@@ -186,19 +186,7 @@ const $q = useQuasar()
 const route = useRoute()
 const router = useRouter()
 
-// Until the WebSockets, the channel list is asked for every few seconds,
-// so new invitations, bans and statuses show up without a reload.
-// Offline, nothing comes until going online again (use case 9)
-const REFRESH_MS = 3000
-let timer
-
-onMounted(() => {
-  startTypingSimulation()
-  timer = setInterval(() => {
-    if (currentUser.status !== 'offline') loadChannels().catch(() => {})
-  }, REFRESH_MS)
-})
-onUnmounted(() => clearInterval(timer))
+onMounted(startTypingSimulation)
 
 // Invalidating token
 async function onLogout() {
@@ -213,6 +201,13 @@ async function saveSettings(settings) {
     $q.notify({ type: 'negative', message: errorText(error) })
   }
 }
+
+watch(
+  () => currentUser.status,
+  status => {
+    if (status !== 'offline') loadChannels().catch(() => {})
+  }
+)
 
 const drawerOpen = ref(false)
 const membersOpen = ref(false)

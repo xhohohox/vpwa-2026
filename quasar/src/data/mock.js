@@ -4,6 +4,7 @@
 import { reactive } from 'vue'
 
 export const currentUser = reactive({
+  id: null,
   firstName: 'Peter',
   lastName: 'Bondra',
   nickName: 'bondra2002',
